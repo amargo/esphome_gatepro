@@ -1,0 +1,142 @@
+##############################################
+# GatePro Boxer Gate Motor - Example Config #
+##############################################
+
+# Basic device configuration
+substitutions:
+  devicename: "driveway-gate"
+  name: Driveway Gate
+  # Gate SRC code that must be appended to all commands
+  # IMPORTANT: This unique identifier authenticates commands to your specific gate
+  # Each gate has its own unique SRC code - you must use your gate's code here
+  gate_src: "src=P00287D7\r\n"
+
+esphome:
+  name: ${devicename}
+  friendly_name: ${name}
+  project:
+    name: esphome.web
+    version: dev  
+
+esp32:
+  board: wemos_d1_mini32
+
+# Include base configuration if you have one
+<<: !include .base.yaml
+
+# IMPORTANT: Disable UART logging for proper operation
+logger:
+  baud_rate: 0
+  # level: DEBUG  # Uncomment for debugging
+
+# Web interface
+web_server:
+  version: 3
+
+captive_portal:
+
+# External components configuration
+external_components:
+  - source:
+      type: git
+      url: https://github.com/amargo/esphome_gatepro_external_components
+      ref: main
+    components: [ gatepro ]
+    refresh: 0s
+
+# UART configuration - critical for proper communication
+uart:
+  baud_rate: 9600
+  tx_pin: GPIO1  # Connect to WHITE wire
+  rx_pin: GPIO3  # Connect to BLUE wire
+  debug:
+    direction: BOTH
+    dummy_receiver: false
+    sequence:
+      - lambda: |-
+          UARTDebug::log_string(direction, bytes);
+
+# Gate cover component
+cover:
+  - platform: gatepro
+    name: "${name}"
+    device_class: gate
+    update_interval: 0.5s
+
+# Control buttons
+button:
+  # System buttons
+  - platform: restart
+    name: "Reboot"
+    id: reboot_btn
+    entity_category: "diagnostic"
+    
+  # Basic operation
+  - platform: uart
+    name: "Gate Open"
+    data: "FULL OPEN;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "Gate Close"
+    data: "FULL CLOSE;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "Gate Stop"
+    data: "RS;${gate_src}"
+    entity_category: diagnostic    
+
+  # Learn operation
+  - platform: uart
+    name: "AUTO LEARN"
+    data: "AUTO LEARN;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "READ LEARN STATUS"
+    data: "READ LEARN STATUS;${gate_src}"
+    entity_category: "diagnostic"
+
+  # params # ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n"
+  - platform: uart
+    name: "RP btn (read params)"
+    data: "RP,1:;${gate_src}"
+    entity_category: "diagnostic"
+
+  # speed
+  - platform: uart
+    name: "WriteSpeed 1"
+    data: "WP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "WriteSpeed 4"
+    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    entity_category: "diagnostic"
+    
+  # Lock controls
+  - platform: uart
+    name: "PermaLock ON"
+    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,1;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "PermaLock OFF"
+    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    entity_category: "diagnostic"
+
+# Diagnostic sensors
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal dB sensor"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+  - platform: uptime
+    type: seconds
+    name: "Uptime sensor"
+    id: uptime_sensor
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+text_sensor:
+  - platform: version
+    name: "ESPHome Version"
+    id: esphome_version
+    entity_category: "diagnostic"

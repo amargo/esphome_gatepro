@@ -1,0 +1,16 @@
+# Home Assistant Dashboard Tile Configuration for GatePro Gate
+# Add this to your Lovelace dashboard
+
+type: tile
+entity: cover.driveway_gate_driveway_gate
+name: Gate open / close
+features:
+  - type: cover-open-close
+  - type: cover-position
+tap_action:
+  action: toggle
+hold_action:
+  action: more-info
+show_entity_picture: true
+vertical: true
+features_position: bottom

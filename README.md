@@ -1,64 +1,278 @@
-# esphome_external_components
-Central repo for my ESPHome external components to be used by the ESPHome server
+# ESPHome External Components
+Central repo for ESPHome external components to be used by the ESPHome server
 
-# the components
+# Components
 
-## GatePro gate opener
-GatePro and most likely some other brands are using TMT CHOW and a wifi box with an ESP32 to control the gate operation. Flashing the said ESP32 (or replacing it) with this ESPHome firmware will allow seemless integration.
-#### Example usage
+## GatePro Boxer Gate Motor Integration
+
+GatePro and similar brands use TMT CHOW controllers with an ESP32-based WiFi box to control gate operations. By flashing the ESP32 (or replacing it) with this ESPHome firmware, you can achieve seamless integration with Home Assistant.
+
+### Hardware Setup
+
+#### UART Connection Guide
+
+The GatePro controller board has two serial connectors:
+
+1. **Left upper four solder points** (3V3 / TXD / RXD / GND): 
+   - This connects directly to the ESP32 module's UART0
+   - Used for flashing and debugging
+
+2. **Right side 6-pin connector**: 
+   - This is the bus to the motor controller
+   - **This is the one you need to use for motor control!**
+
+#### Wiring the 6-pin Connector
+
+The right-side 6-pin connector pinout:
+
 ```
-uart:
-  baud_rate: 9600
-  tx_pin: GPIO17
-  rx_pin: GPIO16
+[1] Empty
+[2] Yellow (LED/status - not UART)
+[3] Red    (+5V power)
+[4] Blue   ← MOTOR TX → connect to ESP32 RX (GPIO3)
+[5] White  ← MOTOR RX → connect to ESP32 TX (GPIO1)
+[6] Black  GND        → connect to ESP32 GND
+```
+
+Connect as follows:
+- ESP32 GPIO1 (TX0) → White wire
+- ESP32 GPIO3 (RX0) ← Blue wire
+
+**Note**: The ESP32 is already powered internally by 3.3V from the module. Do not connect 5V to the ESP32's 3V3 pin.
+
+#### Verification with Multimeter
+
+You can verify connections using a multimeter in continuity mode:
+- Place one probe on the black wire of the right connector and the other on the left side GND point (or ESP32 GND pad). It should beep.
+- Similarly, you can check the blue-white pair: the blue wire connects to the left side RXD point, and the white wire connects to the TXD point.
+
+### Software Configuration
+
+#### Example YAML Configuration
+
+A complete example configuration file is available in the [examples directory](examples/gatepro_boxer_example.yaml).
+
+Below is a basic configuration example:
+
+```yaml
+substitutions:
+  devicename: "driveway-gate"
+  name: Driveway Gate
+  # Gate SRC code that must be appended to all commands
+  # IMPORTANT: This unique identifier authenticates commands to your specific gate
+  # Each gate has its own unique SRC code - you must use your gate's code here
+  gate_src: "src=P00287D7\r\n"
+
+esphome:
+  name: ${devicename}
+  friendly_name: ${name}
+  project:
+    name: esphome.web
+    version: dev  
+
+esp32:
+  board: wemos_d1_mini32
+
+# Include base configuration
+<<: !include .base.yaml
+
+# Disable UART logging
+logger:
+  baud_rate: 0
+  # level: DEBUG
+
+web_server:
+  version: 3
+
+captive_portal:
 
 external_components:
   - source:
       type: git
-      url: https://github.com/markv9401/esphome-external-component-uart-reader
+      url: https://github.com/amargo/esphome_gatepro_external_components
       ref: main
     components: [ gatepro ]
     refresh: 0s
 
-cover:
-  - platform: gatepro
-    name: "Driveway gate"
-    device_class: gate
-    update_interval: 1s
-```
-
-## Gree / Syen HVAC systems
-Gree and Syen (and most likely numerous others) are using a really similar UART communication on the WiFi box. This implementation will allow great integration into HA.
-#### Example usage
-```
-external_components:
-  - source:
-      type: git
-      url: https://github.com/markv9401/esphome_gree_hvac
-      ref: dev
-    components: [ gree ]
-    refresh: 0s
-
 uart:
-  id: ac_uart
+  baud_rate: 9600
   tx_pin: GPIO1
   rx_pin: GPIO3
-  baud_rate: 4800
-  data_bits: 8
-  parity: EVEN
-  stop_bits: 1
+  debug:
+    direction: BOTH
+    dummy_receiver: false
+    sequence:
+      - lambda: |-
+          UARTDebug::log_string(direction, bytes);
 
-climate:
-  - platform: gree
-    name: GreeHVAC_Bedroom
-    supported_presets:
-      - "NONE"
-      - "BOOST"
-      - "SLEEP"
-    supported_swing_modes:
-      - "VERTICAL"
-      - "HORIZONTAL"
-      - "BOTH"
-      - "OFF"
+cover:
+  - platform: gatepro
+    name: "${name}"
+    device_class: gate
+    update_interval: 0.5s
+
+# Control buttons
+button:
+  - platform: restart
+    name: "Reboot"
+    id: reboot_btn
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "Gate Open"
+    data: "FULL OPEN;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "Gate Close"
+    data: "FULL CLOSE;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "Gate Stop"
+    data: "RS;${gate_src}"
+    entity_category: diagnostic    
+
+  # Learn operation buttons
+  - platform: uart
+    name: "AUTO LEARN"
+    data: "AUTO LEARN;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "READ LEARN STATUS"
+    data: "READ LEARN STATUS;${gate_src}"
+    entity_category: "diagnostic"
+
+  # Parameter buttons
+  - platform: uart
+    name: "RP btn (read params)"
+    data: "RP,1:;${gate_src}"
+    entity_category: "diagnostic"
+
+  # Speed control buttons
+  - platform: uart
+    name: "WriteSpeed 1"
+    data: "WP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "WriteSpeed 4"
+    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "PermaLock ON"
+    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,1;${gate_src}"
+    entity_category: "diagnostic"
+  - platform: uart
+    name: "PermaLock OFF"
+    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    entity_category: "diagnostic"
+
+# Sensors
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal dB sensor"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+  - platform: uptime
+    type: seconds
+    name: "Uptime sensor"
+    id: uptime_sensor
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+text_sensor:
+  - platform: version
+    name: "ESPHome Version"
+    id: esphome_version
+    entity_category: "diagnostic"
 ```
-_based on bekmansurov/esphome_gree_hvac_
+
+### AUTO LEARN Process
+
+The AUTO LEARN feature is crucial for proper gate operation. It allows the motor to learn the gate's travel limits and operation parameters. Here's how to use it:
+
+1. **Important**: Before initiating AUTO LEARN, disable UART logging by setting:
+   ```yaml
+   logger:
+     baud_rate: 0
+   ```
+
+2. **Initiating AUTO LEARN**:
+   - After flashing your ESP32 and connecting it to Home Assistant, locate the "AUTO LEARN" button in the Home Assistant interface
+   - Press the "AUTO LEARN" button
+   - The gate will begin a calibration sequence:
+     - It will open fully
+     - Then close fully
+     - Then open partially
+     - Finally close again
+
+3. **Verifying AUTO LEARN Status**:
+   - Use the "READ LEARN STATUS" button to check if the learning process completed successfully
+   - A successful response indicates the gate is properly calibrated
+
+4. **Troubleshooting**:
+   - If AUTO LEARN fails, ensure:
+     - All wiring connections are correct
+     - The gate can move freely without obstructions
+     - UART logging is disabled
+     - Try power cycling the gate controller
+
+### Parameter Settings
+
+The GatePro controller accepts various parameters that can be modified:
+
+1. **Reading Parameters**:
+   - Use the "RP btn (read params)" button to read current parameters
+   - The response format is: `ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n`
+
+2. **Speed Settings**:
+   - "WriteSpeed 1" sets the gate to slow speed
+   - "WriteSpeed 4" sets the gate to fast speed
+   - The 4th parameter in the WP command controls speed (values 1-4)
+
+3. **Permanent Lock**:
+   - "PermaLock ON" enables the permanent lock feature
+   - "PermaLock OFF" disables the permanent lock
+   - The last parameter (17th) controls this feature (0=off, 1=on)
+
+### Home Assistant Integration
+
+#### Dashboard Configuration
+
+After integrating your GatePro gate with ESPHome and Home Assistant, you can add a nice tile to your dashboard for easy control. A complete example tile configuration is available in the [examples directory](examples/home_assistant_tile_config.yaml).
+
+Here's a basic tile configuration example:
+
+```yaml
+type: tile
+entity: cover.driveway_gate_driveway_gate
+name: Gate open / close
+features:
+  - type: cover-open-close
+  - type: cover-position
+tap_action:
+  action: toggle
+hold_action:
+  action: more-info
+show_entity_picture: true
+vertical: true
+features_position: bottom
+```
+
+This configuration creates a clean, user-friendly tile with open/close buttons and position indicator. Tapping the tile toggles the gate, while holding it opens the detailed information panel.
+
+### Troubleshooting
+
+1. **Gate Not Responding to Commands**:
+   - Ensure UART logging is disabled (`baud_rate: 0`)
+   - Verify the correct GPIO pins are used (GPIO1 for TX, GPIO3 for RX)
+   - Check physical connections between ESP32 and the gate controller
+   - Ensure the gate_src parameter matches your gate's source code
+
+2. **Erratic Behavior**:
+   - Run the AUTO LEARN process again
+   - Check for any physical obstructions
+   - Verify power supply is stable
+
+3. **Communication Issues**:
+   - Enable UART debug temporarily to see the communication
+   - Verify baud rate is set to 9600
+   - Check that TX/RX wires are not reversed
