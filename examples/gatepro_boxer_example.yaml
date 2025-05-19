@@ -101,26 +101,6 @@ button:
     data: "RP,1:;${gate_src}"
     entity_category: "diagnostic"
 
-  # speed
-  - platform: uart
-    name: "WriteSpeed 1"
-    data: "WP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
-    name: "WriteSpeed 4"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
-    entity_category: "diagnostic"
-    
-  # Lock controls
-  - platform: uart
-    name: "PermaLock ON"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,1;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
-    name: "PermaLock OFF"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
-    entity_category: "diagnostic"
-
 # Diagnostic sensors
 sensor:
   - platform: wifi_signal

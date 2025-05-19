@@ -146,22 +146,31 @@ button:
     data: "RP,1:;${gate_src}"
     entity_category: "diagnostic"
 
-  # Speed control buttons
+  # Advanced control examples
+  # Speed control
   - platform: uart
-    name: "WriteSpeed 1"
-    data: "WP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    name: "Operating Speed 50 %"
+    data: "WP,4:1;${gate_src}"    # 4-1 = 50 %
     entity_category: "diagnostic"
   - platform: uart
-    name: "WriteSpeed 4"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    name: "Operating Speed 100 %"
+    data: "WP,4:4;${gate_src}"    # 4-4 = 100 %
+    entity_category: "diagnostic"
+
+  # Auto-closing function
+  - platform: uart
+    name: "Auto-close OFF"
+    data: "WP,2:0;${gate_src}"    # 2-0 = disabled
     entity_category: "diagnostic"
   - platform: uart
-    name: "PermaLock ON"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,1;${gate_src}"
+    name: "Auto-close 60 s"
+    data: "WP,2:5;${gate_src}"    # 2-5 = 60 seconds
     entity_category: "diagnostic"
+
+  # Pedestrian gate function
   - platform: uart
-    name: "PermaLock OFF"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
+    name: "Pedestrian 6 s"
+    data: "WP,8:2;${gate_src}"    # 8-2 = 6 seconds (default)
     entity_category: "diagnostic"
 
 # Sensors
@@ -357,3 +366,12 @@ This configuration creates a clean, user-friendly tile with open/close buttons a
    - Enable UART debug temporarily to see the communication
    - Verify baud rate is set to 9600
    - Check that TX/RX wires are not reversed
+
+4. **Advanced Configuration**:
+   - For advanced control options, check the `examples/gatepro_boxer_advanced_commands.yaml` file
+   - This file contains numerous solutions for controlling various parameters:
+     - Operating speed settings
+     - Auto-closing timers
+     - Deceleration distance and speed
+     - Torque sensing and reaction settings
+     - Pedestrian gate timing options
