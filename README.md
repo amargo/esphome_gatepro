@@ -217,7 +217,9 @@ The AUTO LEARN feature is crucial for proper gate operation. It allows the motor
 
 ### Parameter Settings
 
-The GatePro controller accepts various parameters that can be modified:
+The GatePro controller accepts various parameters that can be modified. A complete set of advanced commands is available in the [examples directory](examples/gatepro_boxer_advanced_commands.yaml).
+
+#### Basic Parameters
 
 1. **Reading Parameters**:
    - Use the "RP btn (read params)" button to read current parameters
@@ -232,6 +234,85 @@ The GatePro controller accepts various parameters that can be modified:
    - "PermaLock ON" enables the permanent lock feature
    - "PermaLock OFF" disables the permanent lock
    - The last parameter (17th) controls this feature (0=off, 1=on)
+
+#### Advanced Parameters
+
+The GatePro controller supports a more efficient way to control parameters using targeted commands. Instead of overwriting the entire parameter array with `WP,1:...`, you can target specific parameters with their function code.
+
+This approach has several advantages:
+- **Cleaner**: Only modifies the specific parameter you want to change
+- **Simpler**: Easier to understand what each command does
+- **Safer**: Other parameters remain unchanged
+
+##### Parameter Command Format
+
+```
+WP,<function_code>:<value>;src=XXXXXXX\r\n
+```
+
+Where:
+- `<function_code>` is the parameter group (2, 4, 5, 6, 7, 8, A)
+- `<value>` is the setting value for that parameter
+
+The following advanced parameters can be controlled:
+
+1. **Auto-closing Function** (Parameter 2):
+   - `WP,2:0;` - Disabled
+   - `WP,2:1;` - 5 seconds
+   - `WP,2:2;` - 15 seconds (default)
+   - `WP,2:3;` - 30 seconds
+   - `WP,2:4;` - 45 seconds
+   - `WP,2:5;` - 60 seconds
+   - `WP,2:6;` - 80 seconds
+   - `WP,2:7;` - 120 seconds
+   - `WP,2:8;` - 180 seconds
+
+2. **Operating Speed** (Parameter 4):
+   - `WP,4:1;` - 50%
+   - `WP,4:2;` - 70%
+   - `WP,4:3;` - 85%
+   - `WP,4:4;` - 100%
+
+3. **Deceleration Distance** (Parameter 5):
+   - `WP,5:1;` - Start deceleration at 75% of travel
+   - `WP,5:2;` - Start deceleration at 80% of travel
+   - `WP,5:3;` - Start deceleration at 85% of travel
+   - `WP,5:4;` - Start deceleration at 90% of travel
+   - `WP,5:5;` - Start deceleration at 95% of travel
+
+4. **Deceleration Speed** (Parameter 6):
+   - `WP,6:1;` - 80% of normal speed
+   - `WP,6:2;` - 60% of normal speed
+   - `WP,6:3;` - 40% of normal speed
+   - `WP,6:4;` - 25% of normal speed
+
+5. **Force and Torque Sensing** (Parameter 7):
+   - `WP,7:1;` - 2A
+   - `WP,7:2;` - 3A
+   - `WP,7:3;` - 4A
+   - `WP,7:4;` - 5A
+   - `WP,7:5;` - 6A (default)
+   - `WP,7:6;` - 7A
+   - `WP,7:7;` - 8A
+   - `WP,7:8;` - 9A
+   - `WP,7:9;` - 10A
+   - `WP,7:A;` - 11A (BOXER800 only)
+   - `WP,7:C;` - 12A (BOXER800 only)
+   - `WP,7:E;` - 13A (BOXER800 only)
+
+6. **Pedestrian Gate Function** (Parameter 8):
+   - `WP,8:1;` - 3 seconds
+   - `WP,8:2;` - 6 seconds (default)
+   - `WP,8:3;` - 9 seconds
+   - `WP,8:4;` - 12 seconds
+   - `WP,8:5;` - 15 seconds
+   - `WP,8:6;` - 18 seconds
+
+7. **Torque Sensing Reaction** (Parameter A):
+   - `WP,A:0;` - Stop
+   - `WP,A:1;` - Stop + Reverse for 1 second
+   - `WP,A:2;` - Stop + Reverse for 3 seconds
+   - `WP,A:3;` - Stop + Reverse to end position
 
 ### Home Assistant Integration
 
