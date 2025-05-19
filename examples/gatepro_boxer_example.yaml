@@ -83,7 +83,17 @@ button:
   - platform: uart
     name: "Gate Stop"
     data: "RS;${gate_src}"
-    entity_category: diagnostic    
+    entity_category: diagnostic
+
+  # Parameter examples with codes in name
+  - platform: uart
+    name: "Auto-close 5s (2:1)"
+    data: "WP,2:1;${gate_src}"
+    entity_category: diagnostic
+  - platform: uart
+    name: "Torque Reaction Stop (A:0)"
+    data: "WP,A:0;${gate_src}"
+    entity_category: diagnostic
 
   # Learn operation
   - platform: uart

@@ -11,191 +11,191 @@
 button:
   # 2. Auto-closing function
   - platform: uart
-    name: "Auto-close OFF"
+    name: "Auto-close OFF (2:0)"
     data: "WP,2:0;${gate_src}"    # 2-0 = disabled
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 5 s"
+    name: "Auto-close 5 s (2:1)"
     data: "WP,2:1;${gate_src}"    # 2-1 = 5 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 15 s"
+    name: "Auto-close 15 s (2:2)"
     data: "WP,2:2;${gate_src}"    # 2-2 = 15 seconds (default)
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 30 s"
+    name: "Auto-close 30 s (2:3)"
     data: "WP,2:3;${gate_src}"    # 2-3 = 30 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 45 s"
+    name: "Auto-close 45 s (2:4)"
     data: "WP,2:4;${gate_src}"    # 2-4 = 45 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 60 s"
+    name: "Auto-close 60 s (2:5)"
     data: "WP,2:5;${gate_src}"    # 2-5 = 60 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 80 s"
+    name: "Auto-close 80 s (2:6)"
     data: "WP,2:6;${gate_src}"    # 2-6 = 80 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 120 s"
+    name: "Auto-close 120 s (2:7)"
     data: "WP,2:7;${gate_src}"    # 2-7 = 120 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Auto-close 180 s"
+    name: "Auto-close 180 s (2:8)"
     data: "WP,2:8;${gate_src}"    # 2-8 = 180 seconds
     entity_category: diagnostic
 
   # 4. Operating speed
   - platform: uart
-    name: "Operating Speed 50 %"
+    name: "Operating Speed 50 % (4:1)"
     data: "WP,4:1;${gate_src}"    # 4-1 = 50 %
     entity_category: diagnostic
   - platform: uart
-    name: "Operating Speed 70 %"
+    name: "Operating Speed 70 % (4:2)"
     data: "WP,4:2;${gate_src}"    # 4-2 = 70 %
     entity_category: diagnostic
   - platform: uart
-    name: "Operating Speed 85 %"
+    name: "Operating Speed 85 % (4:3)"
     data: "WP,4:3;${gate_src}"    # 4-3 = 85 %
     entity_category: diagnostic
   - platform: uart
-    name: "Operating Speed 100 %"
+    name: "Operating Speed 100 % (4:4)"
     data: "WP,4:4;${gate_src}"    # 4-4 = 100 %
     entity_category: diagnostic
 
   # 5. Deceleration distance
   - platform: uart
-    name: "Decel Start @75 %"
+    name: "Decel Start @75 % (5:1)"
     data: "WP,5:1;${gate_src}"    # 5-1 = 75 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Start @80 %"
+    name: "Decel Start @80 % (5:2)"
     data: "WP,5:2;${gate_src}"    # 5-2 = 80 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Start @85 %"
+    name: "Decel Start @85 % (5:3)"
     data: "WP,5:3;${gate_src}"    # 5-3 = 85 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Start @90 %"
+    name: "Decel Start @90 % (5:4)"
     data: "WP,5:4;${gate_src}"    # 5-4 = 90 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Start @95 %"
+    name: "Decel Start @95 % (5:5)"
     data: "WP,5:5;${gate_src}"    # 5-5 = 95 %
     entity_category: diagnostic
 
   # 6. Deceleration speed
   - platform: uart
-    name: "Decel Speed 80 %"
+    name: "Decel Speed 80 % (6:1)"
     data: "WP,6:1;${gate_src}"    # 6-1 = 80 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Speed 60 %"
+    name: "Decel Speed 60 % (6:2)"
     data: "WP,6:2;${gate_src}"    # 6-2 = 60 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Speed 40 %"
+    name: "Decel Speed 40 % (6:3)"
     data: "WP,6:3;${gate_src}"    # 6-3 = 40 %
     entity_category: diagnostic
   - platform: uart
-    name: "Decel Speed 25 %"
+    name: "Decel Speed 25 % (6:4)"
     data: "WP,6:4;${gate_src}"    # 6-4 = 25 %
     entity_category: diagnostic
 
   # 7. Force/torque sensing
   - platform: uart
-    name: "Torque Sense 2 A"
+    name: "Torque Sense 2 A (7:1)"
     data: "WP,7:1;${gate_src}"    # 7-1 = 2 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 3 A"
+    name: "Torque Sense 3 A (7:2)"
     data: "WP,7:2;${gate_src}"    # 7-2 = 3 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 4 A"
+    name: "Torque Sense 4 A (7:3)"
     data: "WP,7:3;${gate_src}"    # 7-3 = 4 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 5 A"
+    name: "Torque Sense 5 A (7:4)"
     data: "WP,7:4;${gate_src}"    # 7-4 = 5 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 6 A"
+    name: "Torque Sense 6 A (7:5)"
     data: "WP,7:5;${gate_src}"    # 7-5 = 6 A (default)
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 7 A"
+    name: "Torque Sense 7 A (7:6)"
     data: "WP,7:6;${gate_src}"    # 7-6 = 7 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 8 A"
+    name: "Torque Sense 8 A (7:7)"
     data: "WP,7:7;${gate_src}"    # 7-7 = 8 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 9 A"
+    name: "Torque Sense 9 A (7:8)"
     data: "WP,7:8;${gate_src}"    # 7-8 = 9 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 10 A"
+    name: "Torque Sense 10 A (7:9)"
     data: "WP,7:9;${gate_src}"    # 7-9 = 10 A
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 11 A (BOXER800)"
+    name: "Torque Sense 11 A (7:A)"
     data: "WP,7:A;${gate_src}"    # 7-A = 11 A*
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 12 A (BOXER800)"
+    name: "Torque Sense 12 A (7:C)"
     data: "WP,7:C;${gate_src}"    # 7-C = 12 A*
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Sense 13 A (BOXER800)"
+    name: "Torque Sense 13 A (7:E)"
     data: "WP,7:E;${gate_src}"    # 7-E = 13 A*
     entity_category: diagnostic
 
   # 8. Pedestrian gate function
   - platform: uart
-    name: "Pedestrian 3 s"
+    name: "Pedestrian 3 s (8:1)"
     data: "WP,8:1;${gate_src}"    # 8-1 = 3 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Pedestrian 6 s"
+    name: "Pedestrian 6 s (8:2)"
     data: "WP,8:2;${gate_src}"    # 8-2 = 6 seconds (default)
     entity_category: diagnostic
   - platform: uart
-    name: "Pedestrian 9 s"
+    name: "Pedestrian 9 s (8:3)"
     data: "WP,8:3;${gate_src}"    # 8-3 = 9 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Pedestrian 12 s"
+    name: "Pedestrian 12 s (8:4)"
     data: "WP,8:4;${gate_src}"    # 8-4 = 12 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Pedestrian 15 s"
+    name: "Pedestrian 15 s (8:5)"
     data: "WP,8:5;${gate_src}"    # 8-5 = 15 seconds
     entity_category: diagnostic
   - platform: uart
-    name: "Pedestrian 18 s"
+    name: "Pedestrian 18 s (8:6)"
     data: "WP,8:6;${gate_src}"    # 8-6 = 18 seconds
     entity_category: diagnostic
 
   # A. Torque sensing reaction
   - platform: uart
-    name: "Torque Reaction = Stop"
+    name: "Torque Reaction = Stop (A:0)"
     data: "WP,A:0;${gate_src}"    # A-0 = stop
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Reaction = Stop + Reverse 1 s"
+    name: "Torque Reaction = Stop + Reverse 1 s (A:1)"
     data: "WP,A:1;${gate_src}"    # A-1 = stop + reverse 1 s
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Reaction = Stop + Reverse 3 s"
+    name: "Torque Reaction = Stop + Reverse 3 s (A:2)"
     data: "WP,A:2;${gate_src}"    # A-2 = stop + reverse 3 s
     entity_category: diagnostic
   - platform: uart
-    name: "Torque Reaction = Stop + Reverse to End"
+    name: "Torque Reaction = Stop + Reverse to End (A:3)"
     data: "WP,A:3;${gate_src}"    # A-3 = stop + reverse to end position
     entity_category: diagnostic
 
