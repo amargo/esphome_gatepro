@@ -23,10 +23,12 @@ esp32:
 # Include base configuration if you have one
 <<: !include .base.yaml
 
-# IMPORTANT: Disable UART logging for proper operation
+# Enable logging for debugging
 logger:
   baud_rate: 0
-  # level: DEBUG  # Uncomment for debugging
+  level: VERBOSE  # Enable verbose logging
+  logs:
+    gatepro: DEBUG  # Enable debug logging for gatepro component
 
 # Web interface
 web_server:
@@ -49,25 +51,15 @@ esphome:
   on_boot:
     priority: -100
     then:
-      - delay: 5s
-      - uart.write: "RP,2:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,4:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,5:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,6:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,7:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,8:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,A:;${gate_src}"
-      - delay: 1s
-      - uart.write: "RP,H:;${gate_src}"
+      - delay: 10s
+      - logger.log: INFO
+        format: "Requesting all parameters on boot"
+      - uart.write: "RP,1:;${gate_src}"
+      - delay: 2s
 
 # UART configuration - critical for proper communication
 uart:
+  id: uart_bus
   baud_rate: 9600
   tx_pin: GPIO1  # Connect to WHITE wire
   rx_pin: GPIO3  # Connect to BLUE wire
@@ -87,6 +79,8 @@ cover:
 
 # Parameter reader component
 gatepro:
+  id: gate_param_reader
+  uart_id: uart_bus
   # Define text sensors for each parameter group
   auto_close:
     name: "Auto Close Setting"
@@ -135,58 +129,11 @@ button:
     data: "RS;${gate_src}"
     entity_category: diagnostic
 
-  # Parameter reading buttons
+  # Button to read all parameters at once
   - platform: uart
-    name: "Read Auto-close (2)"
-    data: "RP,2:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Speed (4)"
-    data: "RP,4:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Decel Start (5)"
-    data: "RP,5:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Decel Speed (6)"
-    data: "RP,6:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Torque Sense (7)"
-    data: "RP,7:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Pedestrian (8)"
-    data: "RP,8:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Torque Reaction (A)"
-    data: "RP,A:;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Read Infra Beam (H)"
-    data: "RP,H:;${gate_src}"
-    entity_category: diagnostic
-
-  # Full parameter examples with complete array
-  # These are the correct way to set parameters without losing other settings
-  - platform: uart
-    name: "WriteSpeed 1"
-    data: "WP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
-    name: "WriteSpeed 4"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
-    name: "PermaLock ON"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,1;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
-    name: "PermaLock OFF"
-    data: "WP,1:1,0,0,4,2,2,0,0,0,3,0,0,3,0,0,0,0;${gate_src}"
-    entity_category: "diagnostic"
+    name: "Read All Parameters"
+    data: "RP,1:;${gate_src}"
+    entity_category: "diagnostic"  
 
 # Diagnostic sensors
 sensor:

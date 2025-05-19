@@ -11,6 +11,7 @@ GatePro = gatepro_ns.class_(
 )
 
 CONF_OPERATIONAL_SPEED = "operational_speed"
+CONF_SOURCE = "source"
 
 cover.COVER_OPERATIONS.update({
     "READ_STATUS": cover.CoverOperation.COVER_OPERATION_READ_STATUS,
@@ -20,6 +21,7 @@ validate_cover_operation = cv.enum(cover.COVER_OPERATIONS, upper=True)
 CONFIG_SCHEMA = cover.COVER_SCHEMA.extend(
     {
         cv.GenerateID(): cv.declare_id(GatePro),
+        cv.Optional(CONF_SOURCE, default="P00287D7"): cv.string,
     }).extend(cv.COMPONENT_SCHEMA).extend(cv.polling_component_schema("60s")).extend(uart.UART_DEVICE_SCHEMA)
 
 
@@ -30,3 +32,6 @@ async def to_code(config):
     await cg.register_component(var, config)
     await cover.register_cover(var, config)
     await uart.register_uart_device(var, config)
+    
+    if CONF_SOURCE in config:
+        cg.add(var.set_source(config[CONF_SOURCE]))

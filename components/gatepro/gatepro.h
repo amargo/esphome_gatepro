@@ -16,13 +16,10 @@ enum GateProCmd : uint8_t {
   GATEPRO_CMD_READ_STATUS,
 };  
 
-const std::map<GateProCmd, const char*> GateProCmdMapping = {
-  {GATEPRO_CMD_OPEN, "FULL OPEN;src=P00287D7\r\n"},
-  {GATEPRO_CMD_CLOSE, "FULL CLOSE;src=P00287D7\r\n"},
-  {GATEPRO_CMD_STOP, "STOP;src=P00287D7\r\n"},
-  {GATEPRO_CMD_READ_STATUS, "RS;src=P00287D7\r\n"}
-};
+// Forward declaration of the GatePro class
+class GatePro;
 
+// Command mapping will be created dynamically based on the source parameter
 
 class GatePro : public cover::Cover, public PollingComponent, public uart::UARTDevice {
  public:
@@ -31,6 +28,29 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   void loop() override;
   void dump_config() override;
   cover::CoverTraits get_traits() override;
+  
+  // Set the source parameter for commands
+  void set_source(const std::string &source) { this->source_ = source; }
+  
+  // Generate command strings based on the source parameter
+  const char* get_command_string(GateProCmd cmd) {
+    static std::string cmd_str;
+    switch (cmd) {
+      case GATEPRO_CMD_OPEN:
+        cmd_str = "FULL OPEN;src=" + this->source_ + "\r\n";
+        break;
+      case GATEPRO_CMD_CLOSE:
+        cmd_str = "FULL CLOSE;src=" + this->source_ + "\r\n";
+        break;
+      case GATEPRO_CMD_STOP:
+        cmd_str = "STOP;src=" + this->source_ + "\r\n";
+        break;
+      case GATEPRO_CMD_READ_STATUS:
+        cmd_str = "RS;src=" + this->source_ + "\r\n";
+        break;
+    }
+    return cmd_str.c_str();
+  }
 
  protected:
   // abstract (cover) logic
@@ -65,6 +85,9 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   float position_;
   bool operation_finished;
   cover::CoverCall* last_call_;
+  
+  // Source parameter for commands (default value as fallback)
+  std::string source_{"P00287D7"};
 };
 
 }  // namespace gatepro

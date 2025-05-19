@@ -12,7 +12,7 @@ static const char* TAG = "gatepro";
 // Helper / misc functions
 ////////////////////////////////////////////
 void GatePro::queue_gatepro_cmd(GateProCmd cmd) {
-  this->tx_queue.push(GateProCmdMapping.at(cmd));
+  this->tx_queue.push(this->get_command_string(cmd));
 }
 
 void GatePro::publish() {
