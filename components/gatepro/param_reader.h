@@ -1,6 +1,10 @@
 #pragma once
 
-#include "esphome.h"
+#include "esphome/core/component.h"
+#include "esphome/core/entity_base.h"
+#include "esphome/core/helpers.h"
+#include "esphome/components/uart/uart.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 
 namespace esphome {
 namespace gatepro {
@@ -24,6 +28,8 @@ class GateProParamReader : public Component, public uart::UARTDevice {
   text_sensor::TextSensor *operation_mode{nullptr};        // group P
 
   void setup() override {
+    ESP_LOGCONFIG("gatepro", "Setting up GatePro Parameter Reader...");
+    
     // Initialize text sensors with default values
     if (auto_close != nullptr)
       auto_close->publish_state("Unknown");
@@ -50,6 +56,31 @@ class GateProParamReader : public Component, public uart::UARTDevice {
     if (operation_mode != nullptr)
       operation_mode->publish_state("Unknown");
   }
+  
+  void dump_config() override {
+    ESP_LOGCONFIG("gatepro", "GatePro Parameter Reader:");
+    if (auto_close != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Auto Close: '%s'", auto_close->get_name().c_str());
+    }
+    if (op_speed != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Operating Speed: '%s'", op_speed->get_name().c_str());
+    }
+    if (decel_start != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Deceleration Start: '%s'", decel_start->get_name().c_str());
+    }
+    if (decel_speed != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Deceleration Speed: '%s'", decel_speed->get_name().c_str());
+    }
+    if (torque_sense != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Torque Sense: '%s'", torque_sense->get_name().c_str());
+    }
+    if (pedestrian != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Pedestrian: '%s'", pedestrian->get_name().c_str());
+    }
+    if (infra_beam != nullptr) {
+      ESP_LOGCONFIG("gatepro", "  Infrared Beam: '%s'", infra_beam->get_name().c_str());
+    }
+  }
 
   void loop() override {
     // Read full line when available
@@ -68,7 +99,7 @@ class GateProParamReader : public Component, public uart::UARTDevice {
   // Method to request parameter values
   void request_param(const std::string &group, const std::string &gate_src) {
     std::string command = "RP," + group + ":;" + gate_src;
-    write_str(command);
+    write_str(command.c_str());
     ESP_LOGD("gatepro", "Requesting parameter group %s", group.c_str());
   }
 
