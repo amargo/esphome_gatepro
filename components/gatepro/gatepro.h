@@ -88,6 +88,10 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   
   // Source parameter for commands (default value as fallback)
   std::string source_{"P00287D7"};
+  
+  // Flags to track gate states
+  bool gate_closed{false};
+  bool gate_open{false};
 };
 
 }  // namespace gatepro
