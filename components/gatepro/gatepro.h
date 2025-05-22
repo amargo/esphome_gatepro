@@ -32,6 +32,9 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   // Set the source parameter for commands
   void set_source(const std::string &source) { this->source_ = source; }
   
+  // Set the open duration warning threshold in milliseconds (default: 5 minutes)
+  void set_open_duration_warning_threshold(uint32_t threshold) { this->open_duration_warning_threshold_ = threshold; }
+  
   // Generate command strings based on the source parameter
   const char* get_command_string(GateProCmd cmd) {
     static std::string cmd_str;
@@ -92,7 +95,18 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   // Flags to track gate states
   bool gate_closed{false};
   bool gate_open{false};
-};
+  
+  // Additional attributes for Home Assistant
+  uint32_t last_operation_time_{0}; // Time when the last operation started
+  uint32_t operation_duration_{0};  // Duration of the last operation in milliseconds
+  bool remote_triggered_{false};    // Whether the last operation was triggered by remote
+  uint32_t open_time_{0};          // Time when the gate was opened (for open duration tracking)
+  uint32_t open_duration_warning_threshold_{300000}; // Threshold for open duration warning (default: 5 minutes)
+  
+  // Methods for additional features
+  void publish_attributes_();       // Publish additional attributes to Home Assistant
+  void check_open_duration_();      // Check if gate has been open for too long
+}; // class GatePro
 
 }  // namespace gatepro
 }  // namespace esphome

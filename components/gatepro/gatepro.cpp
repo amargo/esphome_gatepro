@@ -90,6 +90,12 @@ void GatePro::process() {
     ESP_LOGI(TAG, "Received motor event: %s", msg.c_str());
     bool state_changed = false;
     
+    // Check if this was triggered by remote (src=0001 or similar)
+    if (msg.find("src=") != std::string::npos && msg.find("src=P") == std::string::npos) {
+      this->remote_triggered_ = true;
+      ESP_LOGI(TAG, "Operation triggered by remote control");
+    }
+    
     if (msg.substr(11, 7) == "Opening") {
       ESP_LOGI(TAG, "Gate is opening (remote control or other trigger)");
       this->operation_finished = false;
@@ -97,6 +103,9 @@ void GatePro::process() {
       this->last_operation_ = cover::COVER_OPERATION_OPENING;
       // Reset the gate_closed flag when opening starts
       this->gate_closed = false;
+      
+      // Record operation start time
+      this->last_operation_time_ = millis();
       state_changed = true;
     }
     else if (msg.substr(11, 6) == "Opened") {
@@ -107,6 +116,13 @@ void GatePro::process() {
       // Set a flag to indicate the gate is in open state
       this->gate_open = true;
       this->gate_closed = false; // Ensure closed flag is reset
+      
+      // Calculate operation duration
+      this->operation_duration_ = millis() - this->last_operation_time_;
+      ESP_LOGI(TAG, "Gate opening operation took %u ms", this->operation_duration_);
+      
+      // Record time when gate was opened (for open duration tracking)
+      this->open_time_ = millis();
       state_changed = true;
     }
     else if (msg.substr(11, 7) == "Closing" || msg.substr(11, 11) == "AutoClosing") {
@@ -116,6 +132,9 @@ void GatePro::process() {
       this->last_operation_ = cover::COVER_OPERATION_CLOSING;
       // Reset the gate_open flag when closing starts
       this->gate_open = false;
+      
+      // Record operation start time
+      this->last_operation_time_ = millis();
       state_changed = true;
     }
     else if (msg.substr(11, 6) == "Closed") {
@@ -126,6 +145,13 @@ void GatePro::process() {
       // Set a flag to indicate the gate is in closed state
       this->gate_closed = true;
       this->gate_open = false; // Ensure open flag is reset
+      
+      // Calculate operation duration
+      this->operation_duration_ = millis() - this->last_operation_time_;
+      ESP_LOGI(TAG, "Gate closing operation took %u ms", this->operation_duration_);
+      
+      // Reset open time
+      this->open_time_ = 0;
       state_changed = true;
     }
     else if (msg.substr(11, 7) == "Stopped") {
@@ -305,6 +331,63 @@ void GatePro::setup() {
   this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
   this->blocker = false;
   this->target_position_ = 0.0f;
+  this->last_operation_time_ = millis();
+  this->operation_duration_ = 0;
+  this->remote_triggered_ = false;
+  this->open_time_ = 0;
+}
+
+// Publish additional attributes to Home Assistant
+void GatePro::publish_attributes_() {
+  // Simply update the state with current position
+  this->publish_state();
+  
+  // Log additional information that would normally be attributes
+  // Publish trigger source
+  if (this->remote_triggered_) {
+    ESP_LOGD(TAG, "Last trigger: remote");
+  } else {
+    ESP_LOGD(TAG, "Last trigger: manual");
+  }
+  
+  // Publish operation duration in seconds
+  float duration_sec = this->operation_duration_ / 1000.0f;
+  ESP_LOGD(TAG, "Last operation duration: %.2f seconds", duration_sec);
+  
+  // Publish current state as text
+  if (this->gate_closed) {
+    ESP_LOGD(TAG, "Gate state: closed");
+  } else if (this->gate_open) {
+    ESP_LOGD(TAG, "Gate state: open");
+  } else if (this->current_operation == cover::COVER_OPERATION_OPENING) {
+    ESP_LOGD(TAG, "Gate state: opening");
+  } else if (this->current_operation == cover::COVER_OPERATION_CLOSING) {
+    ESP_LOGD(TAG, "Gate state: closing");
+  } else {
+    ESP_LOGD(TAG, "Gate state: stopped");
+  }
+}
+
+// Check if gate has been open for too long
+void GatePro::check_open_duration_() {
+  if (this->gate_open && this->open_time_ > 0) {
+    uint32_t now = millis();
+    uint32_t open_duration = now - this->open_time_;
+    
+    // If gate has been open for longer than the threshold, log a warning
+    if (open_duration > this->open_duration_warning_threshold_) {
+      static uint32_t last_warning = 0;
+      
+      // Only warn once every minute to avoid log spam
+      if (now - last_warning > 60000) {
+        ESP_LOGW(TAG, "Gate has been open for %u seconds (threshold: %u seconds)", 
+                 open_duration / 1000, this->open_duration_warning_threshold_ / 1000);
+        ESP_LOGW(TAG, "WARNING: Gate open for extended period");
+        ESP_LOGW(TAG, "Open duration: %u seconds", open_duration / 1000);
+        last_warning = now;
+      }
+    }
+  }
 }
 
 void GatePro::update() {
@@ -322,6 +405,13 @@ void GatePro::update() {
   }
 
   this->correction_after_operation();
+  
+  // Publish additional attributes and check open duration
+  this->publish_attributes_();
+  this->check_open_duration_();
+  
+  // Reset remote_triggered flag after update
+  this->remote_triggered_ = false;
 }
 
 void GatePro::loop() {

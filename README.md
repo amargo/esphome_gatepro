@@ -48,6 +48,23 @@ You can verify connections using a multimeter in continuity mode:
 
 ### Software Configuration
 
+#### Features
+
+- **Basic Gate Control**: Open, close, and stop operations
+- **Position Tracking**: Accurate position tracking during operation
+- **Remote Control Detection**: Detects when the gate is operated by remote control
+- **Operation Timing**: Tracks and reports the duration of opening/closing operations
+- **Open Duration Warning**: Configurable warning when gate remains open for too long
+- **Detailed State Reporting**: Provides detailed state information as attributes
+
+#### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `source` | `P00287D7` | Source identifier for commands sent to the gate |
+| `open_duration_warning` | `5min` | Time threshold after which a warning is triggered if gate remains open |
+| `update_interval` | `60s` | How often to poll the gate status |
+
 #### Example YAML Configuration
 
 A complete example configuration file is available in the [examples directory](examples/gatepro_boxer_example.yaml).

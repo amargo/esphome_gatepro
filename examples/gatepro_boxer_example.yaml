@@ -62,6 +62,10 @@ cover:
     name: "${name}"
     device_class: gate
     update_interval: 0.5s
+    source: "${gate_src}"
+    # Time after which a warning will be triggered if gate remains open
+    # Default is 5min, but you can customize it
+    open_duration_warning: 5min
 
 # Control buttons
 button:

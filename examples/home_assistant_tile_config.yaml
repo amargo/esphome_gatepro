@@ -1,16 +1,68 @@
 # Home Assistant Dashboard Tile Configuration for GatePro Gate
-# Add this to your Lovelace dashboard
+# Simply copy this code to your Home Assistant dashboard
+# (In edit mode: "+ Add Card" > "Manual")
 
-type: tile
-entity: cover.driveway_gate_driveway_gate
-name: Gate open / close
-features:
-  - type: cover-open-close
-  - type: cover-position
-tap_action:
-  action: toggle
-hold_action:
-  action: more-info
-show_entity_picture: true
-vertical: true
-features_position: bottom
+type: vertical-stack
+cards:
+  # Gate control tile
+  - type: tile
+    entity: cover.driveway_gate
+    name: Gate Open/Close
+    features:
+      - type: cover-open-close
+      - type: cover-position
+    tap_action:
+      action: toggle
+    hold_action:
+      action: more-info
+    show_entity_picture: true
+    vertical: true
+    features_position: bottom
+    
+  # Gate information card
+  - type: entities
+    title: Gate Status Information
+    show_header_toggle: false
+    entities:
+      - entity: cover.driveway_gate
+        name: Gate Position
+        secondary_info: last-changed
+      - type: section
+        label: Operations
+      - entity: cover.driveway_gate
+        type: attribute
+        attribute: current_operation
+        name: Current Operation
+        icon: mdi:gate
+      - type: section
+        label: Controls
+      - entity: button.gate_open
+        name: Open
+        icon: mdi:gate-open
+      - entity: button.gate_close
+        name: Close
+        icon: mdi:gate
+      - entity: button.gate_stop
+        name: Stop
+        icon: mdi:stop-circle-outline
+
+# Note: You'll need to create template sensors in Home Assistant to display the log information
+# Example template sensor configuration:
+# sensor:
+#   - platform: template
+#     sensors:
+#       driveway_gate_last_operation:
+#         friendly_name: "Last Gate Operation"
+#         value_template: "{{ states('sensor.esphome_driveway_gate_logs') | regex_findall('Gate state: (\\w+)') | last }}"
+#       driveway_gate_operation_duration:
+#         friendly_name: "Gate Operation Duration"
+#         value_template: "{{ states('sensor.esphome_driveway_gate_logs') | regex_findall('Last operation duration: ([0-9.]+)') | last }}"
+#         unit_of_measurement: "seconds"
+#   
+# binary_sensor:
+#   - platform: template
+#     sensors:
+#       driveway_gate_open_too_long:
+#         friendly_name: "Gate Open Too Long"
+#         value_template: "{{ 'Gate open for extended period' in states('sensor.esphome_driveway_gate_logs') }}"
+#         device_class: problem
