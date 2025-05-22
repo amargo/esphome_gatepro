@@ -1,4 +1,7 @@
 # ESPHome External Components
+
+[![ESPHome Compile](https://github.com/amargo/esphome_gatepro_external_components/actions/workflows/esphome.yml/badge.svg)](https://github.com/amargo/esphome_gatepro_external_components/actions/workflows/esphome.yml)
+
 Central repo for ESPHome external components to be used by the ESPHome server
 
 # Components

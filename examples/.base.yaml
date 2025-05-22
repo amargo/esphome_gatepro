@@ -1,0 +1,30 @@
+---
+wifi:
+  networks:
+    # - ssid: !secret wifi_base_ssid
+    #   password: !secret wifi_base_password
+    #   priority: 0
+    - ssid: !secret wifi_iot_ssid
+      password: !secret wifi_iot_password
+      # priority: 1
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: ${name} AP
+    password: !secret esphome_fallback_ap_password
+
+captive_portal:
+
+# Enable logging
+logger:
+  level: info
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret esphome_encryption_key
+  # password: !secret esphome_api_password
+
+ota:
+  - platform: esphome
+    password: !secret esphome_api_password

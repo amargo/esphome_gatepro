@@ -37,10 +37,7 @@ captive_portal:
 
 # External components configuration
 external_components:
-  - source:
-      type: git
-      url: https://github.com/amargo/esphome_gatepro_external_components
-      ref: main
+  - source: github://amargo/esphome_gatepro_external_components[@main]
     components: [ gatepro ]
     refresh: 0s
 

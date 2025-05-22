@@ -15,7 +15,16 @@ esphome:
   friendly_name: ${name}
   project:
     name: esphome.web
-    version: dev  
+    version: dev
+  on_boot:
+    priority: -100
+    then:
+      - delay: 10s
+      - logger.log:
+          level: INFO
+          format: "Requesting all parameters on boot"
+      - uart.write: "RP,1:;${gate_src}"
+      - delay: 2s
 
 esp32:
   board: wemos_d1_mini32
@@ -38,24 +47,12 @@ captive_portal:
 
 # External components configuration
 external_components:
-  - source:
-      type: git
-      url: https://github.com/amargo/esphome_gatepro_external_components
-      ref: main
+  - source: github://amargo/esphome_gatepro_external_components[@main]
     components: [ gatepro ]
     refresh: 0s
 
 # Required components
 api:
-esphome:
-  on_boot:
-    priority: -100
-    then:
-      - delay: 10s
-      - logger.log: INFO
-        format: "Requesting all parameters on boot"
-      - uart.write: "RP,1:;${gate_src}"
-      - delay: 2s
 
 # UART configuration - critical for proper communication
 uart:

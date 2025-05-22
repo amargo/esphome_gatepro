@@ -1,0 +1,67 @@
+name: ESPHome Compile
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        file:
+          - gatepro_boxer_example.yaml
+          - gatepro_param_reader_example.yaml
+        esphome-version:
+          - stable
+          # - dev
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4.1.7
+      
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.esphome
+          key: ${{ runner.os }}-esphome-cache-${{ matrix.esphome-version }}
+          restore-keys: |
+            ${{ runner.os }}-esphome-cache
+
+      # Run ESPHome build action
+      - name: ESPHome ${{ matrix.esphome-version }}
+        uses: esphome/build-action@v6
+        with:
+          yaml-file: examples/${{ matrix.file }}
+          version: ${{ matrix.esphome-version }}
+          complete-manifest: true
+
+      # Collect firmware artifacts
+      - name: Collect all firmware from output folders
+        run: |
+          VERSION=${{ matrix.esphome-version }}
+          mkdir -p output
+          for d in *-*; do
+            if [ -d "$d" ]; then
+              SUBDIR=$(basename "$d")
+              for f in "$d"/*.bin "$d"/*.elf; do
+                if [ -f "$f" ]; then
+                  EXT="${f##*.}"
+                  cp "$f" "output/${SUBDIR}-firmware-${VERSION}.$EXT"
+                fi
+              done
+              # Copy manifest.json if exists
+              if [ -f "$d/manifest.json" ]; then
+                cp "$d/manifest.json" "output/${SUBDIR}-firmware-${VERSION}.manifest.json"
+              fi
+            fi
+          done
+
+      # Upload artifacts
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.file }}-${{ matrix.esphome-version }}
+          path: output
