@@ -10,14 +10,14 @@ jobs:
   compile:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 4
+      max-parallel: 2
       matrix:
         file:
           - gatepro_boxer_example.yaml
           - gatepro_param_reader_example.yaml
         esphome-version:
           - stable
-          # - dev
+          - dev
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4.1.7
