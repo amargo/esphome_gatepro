@@ -14,12 +14,20 @@ enum GateProCmd : uint8_t {
   GATEPRO_CMD_CLOSE,
   GATEPRO_CMD_STOP,
   GATEPRO_CMD_READ_STATUS,
-};  
+};
+
+enum GateProState : uint8_t {
+  STATE_UNKNOWN,
+  STATE_OPENING,
+  STATE_OPEN,
+  STATE_CLOSING,
+  STATE_CLOSED,
+  STATE_STOPPED
+};
 
 // Forward declaration of the GatePro class
 class GatePro;
 
-// Command mapping will be created dynamically based on the source parameter
 
 class GatePro : public cover::Cover, public PollingComponent, public uart::UARTDevice {
  public:
@@ -32,30 +40,47 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   // Set the source parameter for commands
   void set_source(const std::string &source) { this->source_ = source; }
   
-  // Set the open duration warning threshold in milliseconds (default: 5 minutes)
-  void set_open_duration_warning_threshold(uint32_t threshold) { this->open_duration_warning_threshold_ = threshold; }
-  
   // Generate command strings based on the source parameter
   const char* get_command_string(GateProCmd cmd) {
-    static std::string cmd_str;
+    // Use a static array of strings to ensure memory remains valid
+    static char open_cmd[50];
+    static char close_cmd[50];
+    static char stop_cmd[50];
+    static char rs_cmd[50];
+    
+    // Format the commands with the source parameter
     switch (cmd) {
       case GATEPRO_CMD_OPEN:
-        cmd_str = "FULL OPEN;src=" + this->source_ + "\r\n";
-        break;
+        snprintf(open_cmd, sizeof(open_cmd), "FULL OPEN;src=%s\r\n", this->source_.c_str());
+        ESP_LOGD("gatepro", "Generated OPEN command: %s", open_cmd);
+        return open_cmd;
+      
       case GATEPRO_CMD_CLOSE:
-        cmd_str = "FULL CLOSE;src=" + this->source_ + "\r\n";
-        break;
+        snprintf(close_cmd, sizeof(close_cmd), "FULL CLOSE;src=%s\r\n", this->source_.c_str());
+        ESP_LOGD("gatepro", "Generated CLOSE command: %s", close_cmd);
+        return close_cmd;
+      
       case GATEPRO_CMD_STOP:
-        cmd_str = "STOP;src=" + this->source_ + "\r\n";
-        break;
+        snprintf(stop_cmd, sizeof(stop_cmd), "STOP;src=%s\r\n", this->source_.c_str());
+        ESP_LOGD("gatepro", "Generated STOP command: %s", stop_cmd);
+        return stop_cmd;
+      
       case GATEPRO_CMD_READ_STATUS:
-        cmd_str = "RS;src=" + this->source_ + "\r\n";
-        break;
+        snprintf(rs_cmd, sizeof(rs_cmd), "RS;src=%s\r\n", this->source_.c_str());
+        ESP_LOGD("gatepro", "Generated READ_STATUS command: %s", rs_cmd);
+        return rs_cmd;
+      
+      default:
+        ESP_LOGE("gatepro", "Unknown command type: %d", cmd);
+        return "";
     }
-    return cmd_str.c_str();
   }
 
  protected:
+
+  void update_state_from_position(float position);
+  void log_state_change(GateProState old_state, GateProState new_state);
+
   // abstract (cover) logic
   void control(const cover::CoverCall &call) override;
   void start_direction_(cover::CoverOperation dir);
@@ -88,25 +113,21 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   float position_;
   bool operation_finished;
   cover::CoverCall* last_call_;
+
+  GateProState gate_state_{STATE_UNKNOWN};
+  uint32_t last_status_request_{0};
+  uint32_t last_state_change_{0};
+  bool force_state_update_{false};
+  uint8_t consecutive_position_readings_{0};
+  float last_position_reading_{-1.0f};
+  
+  // Pattern detection variables
+  std::string last_pattern_seen_{""};
+  uint8_t consecutive_pattern_readings_{0};
   
   // Source parameter for commands (default value as fallback)
   std::string source_{"P00287D7"};
-  
-  // Flags to track gate states
-  bool gate_closed{false};
-  bool gate_open{false};
-  
-  // Additional attributes for Home Assistant
-  uint32_t last_operation_time_{0}; // Time when the last operation started
-  uint32_t operation_duration_{0};  // Duration of the last operation in milliseconds
-  bool remote_triggered_{false};    // Whether the last operation was triggered by remote
-  uint32_t open_time_{0};          // Time when the gate was opened (for open duration tracking)
-  uint32_t open_duration_warning_threshold_{300000}; // Threshold for open duration warning (default: 5 minutes)
-  
-  // Methods for additional features
-  void publish_attributes_();       // Publish additional attributes to Home Assistant
-  void check_open_duration_();      // Check if gate has been open for too long
-}; // class GatePro
+};
 
 }  // namespace gatepro
 }  // namespace esphome

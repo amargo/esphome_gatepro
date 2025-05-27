@@ -59,6 +59,28 @@ You can verify connections using a multimeter in continuity mode:
 - **Operation Timing**: Tracks and reports the duration of opening/closing operations
 - **Open Duration Warning**: Configurable warning when gate remains open for too long
 - **Detailed State Reporting**: Provides detailed state information as attributes
+- **Robust State Management**: Prevents state jumping between open and closed states
+- **Special Pattern Recognition**: Detects specific status patterns for reliable state reporting
+
+### State Management Improvements
+
+Recent updates have significantly improved the reliability of gate state detection:
+
+1. **Special Pattern Recognition**
+   - The component now recognizes specific status patterns that indicate closed (`A2,00,40,00`) and open (`A2,E3,40,00`) states
+   - These patterns take precedence over position calculations for more reliable state reporting
+
+2. **State Stability Enhancements**
+   - Implemented a 3-second lockout period after state changes to prevent rapid state flipping
+   - Position values close to extremes (within 0.05 of 0.0 or 1.0) are automatically snapped to exactly 0.0 or 1.0
+   - Increased position tolerance from 0.02 to 0.05 to reduce sensitivity to minor fluctuations
+   - State updates only occur after 3 consecutive consistent position readings
+
+3. **Improved Remote Control Handling**
+   - Better coordination between remote control operations and ESPHome interface
+   - Prevents state jumping when using remote controls and ESPHome simultaneously
+
+These improvements ensure that the gate's reported state accurately reflects its physical position without jumping between open and closed states.
 
 #### Configuration Options
 

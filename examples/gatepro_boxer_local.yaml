@@ -1,0 +1,11 @@
+##############################################
+# GatePro Boxer Gate Motor - Local Testing #
+##############################################
+
+# Include the original example file
+<<: !include gatepro_boxer_example.yaml
+
+# Override the external components to use local components
+external_components:
+  - source: ../components
+    components: [ gatepro ]

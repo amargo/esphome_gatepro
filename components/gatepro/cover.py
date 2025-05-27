@@ -12,7 +12,6 @@ GatePro = gatepro_ns.class_(
 
 CONF_OPERATIONAL_SPEED = "operational_speed"
 CONF_SOURCE = "source"
-CONF_OPEN_DURATION_WARNING = "open_duration_warning"
 
 cover.COVER_OPERATIONS.update({
     "READ_STATUS": cover.CoverOperation.COVER_OPERATION_READ_STATUS,
@@ -23,7 +22,6 @@ CONFIG_SCHEMA = cover.COVER_SCHEMA.extend(
     {
         cv.GenerateID(): cv.declare_id(GatePro),
         cv.Optional(CONF_SOURCE, default="P00287D7"): cv.string,
-        cv.Optional(CONF_OPEN_DURATION_WARNING, default="5min"): cv.positive_time_period_milliseconds,
     }).extend(cv.COMPONENT_SCHEMA).extend(cv.polling_component_schema("60s")).extend(uart.UART_DEVICE_SCHEMA)
 
 
@@ -37,6 +35,3 @@ async def to_code(config):
     
     if CONF_SOURCE in config:
         cg.add(var.set_source(config[CONF_SOURCE]))
-        
-    if CONF_OPEN_DURATION_WARNING in config:
-        cg.add(var.set_open_duration_warning_threshold(config[CONF_OPEN_DURATION_WARNING]))

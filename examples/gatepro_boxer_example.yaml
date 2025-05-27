@@ -35,11 +35,10 @@ web_server:
 
 captive_portal:
 
-# External components configuration
+# External components configuration - using local components
 external_components:
-  - source: github://amargo/esphome_gatepro_external_components[@main]
+  - source: ../components
     components: [ gatepro ]
-    refresh: 0s
 
 # UART configuration - critical for proper communication
 uart:
@@ -58,11 +57,8 @@ cover:
   - platform: gatepro
     name: "${name}"
     device_class: gate
-    update_interval: 0.5s
+    update_interval: 0.2s  # Faster updates for more responsive UI
     source: "${gate_src}"
-    # Time after which a warning will be triggered if gate remains open
-    # Default is 5min, but you can customize it
-    open_duration_warning: 5min
 
 # Control buttons
 button:
@@ -83,7 +79,7 @@ button:
     entity_category: "diagnostic"
   - platform: uart
     name: "Gate Stop"
-    data: "RS;${gate_src}"
+    data: "STOP;${gate_src}"
     entity_category: diagnostic
 
   # Parameter examples with codes in name
