@@ -106,6 +106,10 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
       void set_max_amp_slider(number::Number *slider) { max_amp_slider = slider; }
       number::Number *auto_close_slider{nullptr};
       void set_auto_close_slider(number::Number *slider) { auto_close_slider = slider; }
+      number::Number *small_gate_timer{nullptr};
+      void set_small_gate_timer(number::Number *slider) { small_gate_timer = slider; }
+      number::Number *force_detection_number{nullptr};
+      void set_force_detection_number(number::Number *num) { force_detection_number = num; }
 
       // Parameter logic
       void set_param(int idx, int val);

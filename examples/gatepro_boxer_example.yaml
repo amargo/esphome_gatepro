@@ -81,26 +81,27 @@ cover:
     remote_learn: remote_learn_btn
     
     # Number slider components (parameter groups)
-    set_speed: speed_slider              # group 3 - Operation speed
-    set_decel_dist: decel_dist_slider    # group 4 - Deceleration distance
-    set_decel_speed: decel_speed_slider  # group 5 - Deceleration speed
-    set_max_amp: max_amp_slider          # group 6 - Maximum current/torque
-    set_auto_close: auto_close_slider    # group 1 - Auto close timer
+    set_speed: speed_slider              # group 4 - Operation speed
+    set_decel_dist: decel_dist_slider    # group 5 - Deceleration distance
+    set_decel_speed: decel_speed_slider  # group 6 - Deceleration speed
+    set_max_amp: max_amp_slider          # group 7 - Maximum current/torque
+    set_auto_close: auto_close_slider    # group 2 - Auto close timer
+    set_small_gate_timer: small_gate_timer # group 8 - Small gate timer
+    set_force_detection: force_detection_number # group A - Force detection mode
     
     # Text sensor components
     txt_devinfo: devinfo_sensor          # Device information
     txt_learn_status: learn_status_sensor # Learn status information
     
     # Switch components (parameter groups)
-    sw_permalock: permalock_switch       # group 15 - Permanent lock
-    sw_infra1: infra1_switch            # group 13 - Infrared sensor 1
-    sw_infra2: infra2_switch            # group 14 - Infrared sensor 2
+    sw_permalock: permalock_switch
+    sw_infra1: infra1_switch
+    sw_infra2: infra2_switch
 
 # Parameter control buttons
 button:
   # System buttons
   - platform: restart
-    name: "Reboot"
     id: reboot_btn
     entity_category: "diagnostic"
 
@@ -152,65 +153,98 @@ sensor:
 
 # Parameter control sliders
 number:
+  
+    # Group 4: 0-3 (1=default, 1=50%, 2=70%, 3=85%, 4=100%)
   - platform: template
     name: "Operation Speed"
     id: speed_slider
-    min_value: 0
-    max_value: 3
-    step: 1
-    optimistic: true
-    entity_category: "config"
-    
-  - platform: template
-    name: "Deceleration Distance"
-    id: decel_dist_slider
-    min_value: 0
+    min_value: 1
     max_value: 4
     step: 1
     optimistic: true
     entity_category: "config"
     
+    # Group 5: 0-4 (1=default, 1=75%, 2=80%, 3=85%, 4=90%, 5=95%)
   - platform: template
-    name: "Deceleration Speed"
-    id: decel_speed_slider
-    min_value: 0
-    max_value: 3
+    name: "Deceleration Distance"
+    id: decel_dist_slider
+    min_value: 1
+    max_value: 5
     step: 1
     optimistic: true
     entity_category: "config"
     
+    # Group 6: 0-3 (1=default, 1=80%, 2=60%, 3=40%, 4=25%)
+  - platform: template
+    name: "Deceleration Speed"
+    id: decel_speed_slider
+    min_value: 1
+    max_value: 4
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+    # Group 7: 1-9 (1=default, 1=2A, 2=3A, 3=4A, 4=5A, 5=6A, 6=7A, 7=8A, 8=9A, 9=10A, A=11A, C=12A, E=13A)
   - platform: template
     name: "Maximum Current (Torque)"
     id: max_amp_slider
+    min_value: 1
+    max_value: 9
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+    # Group 2: 0-8 (0=disabled, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s, 8=180s)
+  - platform: template
+    name: "Auto Close Timer"
+    id: auto_close_slider
     min_value: 0
     max_value: 8
     step: 1
     optimistic: true
     entity_category: "config"
     
+    # Group 8: 1-6 (1=3s, 2=6s, 3=9s, 4=12s, 5=15s, 6=18s)
   - platform: template
-    name: "Auto Close Timer"
-    id: auto_close_slider
+    name: "Small Gate Timer"
+    id: small_gate_timer
+    min_value: 1
+    max_value: 6
+    step: 1
+    optimistic: true
+    entity_category: "config"
+
+    # Group A: 0-3 (0=disabled, 1=Stop + reverse 1mp, 2=Stop + reverse 3mp, 3=Stop + reverse to end)
+  - platform: template
+    name: "Force Detection Mode"
+    id: force_detection_number
     min_value: 0
-    max_value: 7
+    max_value: 3
     step: 1
     optimistic: true
     entity_category: "config"
 
 # Parameter control switches
+# Switch value ranges and descriptions:
+# Group 13 (sw_infra1): 0-1 (0=disabled, 1=enabled) - Infrared sensor 1
+# Group 14 (sw_infra2): 0-1 (0=disabled, 1=enabled) - Infrared sensor 2
+# Group 15 (sw_permalock): 0-1 (0=disabled, 1=enabled) - Permanent lock
 switch:
+    # Group 15: L-0: disabled, L-1: enabled
   - platform: template
     name: "Permanent Lock"
     id: permalock_switch
     optimistic: true
     entity_category: "config"
     
+    # Group 13: L-0: disabled, L-1: enabled
   - platform: template
     name: "Infrared Sensor 1"
     id: infra1_switch
     optimistic: true
     entity_category: "config"
     
+    # Group 14: L-0: disabled, L-1: enabled
   - platform: template
     name: "Infrared Sensor 2"
     id: infra2_switch

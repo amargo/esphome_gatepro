@@ -20,20 +20,20 @@ cards:
     secondary_info: last_changed
     
   # Basic Controls
-  - type: entities
-    show_header_toggle: false
-    entities:
-      - type: section
-        label: Controls
-      - entity: button.driveway_gate_gate_open
-        name: Open
-        icon: mdi:gate-open
-      - entity: button.driveway_gate_gate_close
-        name: Close
-        icon: mdi:gate
-      - entity: button.driveway_gate_gate_stop
-        name: Stop
-        icon: mdi:stop-circle-outline
+  # - type: entities
+  #   show_header_toggle: false
+  #   entities:
+  #     - type: section
+  #       label: Controls
+  #     - entity: button.driveway_gate_gate_open
+  #       name: Open
+  #       icon: mdi:gate-open
+  #     - entity: button.driveway_gate_gate_close
+  #       name: Close
+  #       icon: mdi:gate
+  #     - entity: button.driveway_gate_gate_stop
+  #       name: Stop
+  #       icon: mdi:stop-circle-outline
         
   # Advanced Functions
   - type: entities
@@ -41,9 +41,9 @@ cards:
     entities:
       - type: section
         label: Advanced
-      - entity: button.driveway_gate_auto_learn
-        name: Auto Learn
-        icon: mdi:school
+      # - entity: button.driveway_gate_auto_learn
+      #   name: Auto Learn
+      #   icon: mdi:school
       - entity: button.driveway_gate_get_parameters
         name: Get Parameters
         icon: mdi:download
@@ -52,42 +52,69 @@ cards:
         icon: mdi:remote
         
   # Motor Parameters
+  # Parameter value ranges:
+  # Speed: 0-3 (0=default, 1=50%, 2=70%, 3=85%, 4=100%)
+  # Decel Distance: 0-4 (0=default, 1=75%, 2=80%, 3=85%, 4=90%, 5=95%)
+  # Decel Speed: 0-3 (0=default, 1=80%, 2=60%, 3=40%, 4=25%)
+  # Max Current: 0-8 (0=default, 1=2A, 2=3A, 3=4A, 4=5A, 5=6A, 6=7A, 7=8A, 8=9A)
+  # Auto Close: 0-7 (0=disabled, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s)
   - type: entities
     show_header_toggle: false
     entities:
       - type: section
         label: Motor Settings
+      # 0=default, 1=50%, 2=70%, 3=85%, 4=100%
       - entity: number.driveway_gate_operation_speed
         name: Speed
         icon: mdi:speedometer
+      # 1=75%, 2=80%, 3=85%, 4=90%, 5=95%
       - entity: number.driveway_gate_deceleration_distance
         name: Decel Distance
         icon: mdi:arrow-collapse-horizontal
+      # 1=80%, 2=60%, 3=40%, 4=25%
       - entity: number.driveway_gate_deceleration_speed
         name: Decel Speed
         icon: mdi:speedometer-slow
+      # 1=2A, 2=3A, 3=4A, 4=5A, 5=6A, 6=7A, 7=8A, 8=9A, 9=10A
       - entity: number.driveway_gate_maximum_current_torque
         name: Max Current
         icon: mdi:current-ac
+      # 0=OFF, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s
       - entity: number.driveway_gate_auto_close_timer
         name: Auto Close (sec)
         icon: mdi:timer
         
   # Safety Settings
+  # Switch value ranges:
+  # Permanent Lock: 0-1 (0=disabled, 1=enabled)
+  # IR Sensors: 0-1 (0=disabled, 1=enabled)
+  # Force Detection Mode: 0-3 (0=disabled, 1=stop+reverse 1s, 2=stop+reverse 3s, 3=stop+reverse to end)
+  # Small Gate Timer: 1-6 (1=3s, 2=6s, 3=9s, 4=12s, 5=15s, 6=18s)
   - type: entities
     show_header_toggle: false
     entities:
       - type: section
         label: Safety
+      # ON=Locked (no movement)
       - entity: switch.driveway_gate_permanent_lock
         name: Permanent Lock
         icon: mdi:lock
+      # ON=Enabled, OFF=Disabled
       - entity: switch.driveway_gate_infrared_sensor_1
         name: IR Sensor 1
         icon: mdi:eye
+      # ON=Enabled, OFF=Disabled
       # - entity: switch.driveway_gate_infrared_sensor_2
       #   name: IR Sensor 2
       #   icon: mdi:eye-outline
+      # 0=OFF, 1=stop+reverse 1s, 2=stop+reverse 3s, 3=reverse to end
+      - entity: number.driveway_gate_force_detection_mode
+        name: Force Detection Mode
+        icon: mdi:shield-check
+      # 1=3s, 2=6s, 3=9s, 4=12s, 5=15s, 6=18s
+      - entity: number.driveway_gate_small_gate_timer
+        name: Small Gate Timer
+        icon: mdi:timer-outline
         
   # Status Info
   - type: entities

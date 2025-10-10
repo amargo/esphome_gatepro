@@ -29,6 +29,8 @@ CONF_DECEL_DIST_SLIDER = "set_decel_dist"   # group 4 - Deceleration distance
 CONF_DECEL_SPEED_SLIDER = "set_decel_speed" # group 5 - Deceleration speed
 CONF_MAX_AMP = "set_max_amp"                # group 6 - Maximum current/torque
 CONF_AUTO_CLOSE = "set_auto_close"          # group 1 - Auto close timer
+CONF_SMALL_GATE_TIMER = "set_small_gate_timer" # group 8 - Small gate timer
+CONF_FORCE_DETECTION = "set_force_detection" # group 10 - Force detection reaction
 
 # Text sensor configurations
 CONF_DEVINFO = "txt_devinfo"                # Device information
@@ -65,6 +67,8 @@ CONFIG_SCHEMA = cover.cover_schema(GatePro).extend(
         cv.Optional(CONF_DECEL_SPEED_SLIDER): cv.use_id(number.Number),      # group 5 - Deceleration speed
         cv.Optional(CONF_MAX_AMP): cv.use_id(number.Number),                 # group 6 - Maximum current/torque
         cv.Optional(CONF_AUTO_CLOSE): cv.use_id(number.Number),              # group 1 - Auto close timer
+        cv.Optional(CONF_SMALL_GATE_TIMER): cv.use_id(number.Number),        # group 8 - Small gate timer
+        cv.Optional(CONF_FORCE_DETECTION): cv.use_id(number.Number),         # group 10 - Force detection reaction
         
         # Text sensor components
         cv.Optional(CONF_DEVINFO): cv.use_id(text_sensor.TextSensor),        # Device information
@@ -123,7 +127,13 @@ async def to_code(config):
     if CONF_AUTO_CLOSE in config:                                           # group 1 - Auto close timer
         slider = await cg.get_variable(config[CONF_AUTO_CLOSE])
         cg.add(var.set_auto_close_slider(slider))
-    
+    if CONF_SMALL_GATE_TIMER in config:                                     # group 8 - Small gate timer
+        slider = await cg.get_variable(config[CONF_SMALL_GATE_TIMER])
+        cg.add(var.set_small_gate_timer(slider))
+    if CONF_FORCE_DETECTION in config:                                      # group 10 - Force detection reaction
+        num = await cg.get_variable(config[CONF_FORCE_DETECTION])
+        cg.add(var.set_force_detection_number(num))
+
     # Text sensor components
     if CONF_DEVINFO in config:                                              # Device information
         txt = await cg.get_variable(config[CONF_DEVINFO])

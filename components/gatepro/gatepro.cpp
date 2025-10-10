@@ -171,7 +171,7 @@ void GatePro::process() {
     
     // For position updates, only process them if the gate is in motion
     // This prevents position updates when the gate is stationary
-    // if (!this->operation_finished) {
+    if (!this->operation_finished || this->current_operation != cover::COVER_OPERATION_IDLE) {
       // Extract the position value (hex)
       std::string position_hex = msg.substr(16, 2);
       
@@ -206,7 +206,7 @@ void GatePro::process() {
       this->publish_state();
       
       ESP_LOGD(TAG, "Updated position during motion: %.2f", new_position);
-    // }
+    }
     return;
   }
 
@@ -675,6 +675,10 @@ void GatePro::publish_params() {
          this->sw_infra1->publish_state(this->params[13]);
       if (this->sw_infra2 && this->params.size() > 14) 
          this->sw_infra2->publish_state(this->params[14]);
+      if (this->small_gate_timer && this->params.size() > 8) 
+        this->small_gate_timer->publish_state(this->params[8]);
+      if (this->force_detection_number && this->params.size() > 10) 
+        this->force_detection_number->publish_state(this->params[10]);
    }
 }
 
@@ -754,7 +758,7 @@ void GatePro::setup() {
    this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
    this->blocker = false;
    this->target_position_ = 0.0f;
-   
+
    // Initialize parameter system
    this->queue_gatepro_cmd(GATEPRO_CMD_READ_PARAMS);
    this->queue_gatepro_cmd(GATEPRO_CMD_DEVINFO);
@@ -807,6 +811,7 @@ void GatePro::setup() {
          if (this->params.size() > 3 && this->params[3] == int_value) {
             return;
          }
+         // Group 4: 0-3 (1=default, 1=50%, 2=70%, 3=85%, 4=100%)
          this->set_param(3, int_value);
       });
    }
@@ -817,6 +822,7 @@ void GatePro::setup() {
          if (this->params.size() > 4 && this->params[4] == int_value) {
             return;
          }
+         // Group 5: 0-4 (1=default, 1=75%, 2=80%, 3=85%, 4=90%, 5=95%)
          this->set_param(4, int_value);
       });
    }
@@ -827,6 +833,7 @@ void GatePro::setup() {
          if (this->params.size() > 5 && this->params[5] == int_value) {
             return;
          }
+         // Group 6: 0-3 (1=default, 1=80%, 2=60%, 3=40%, 4=25%)
          this->set_param(5, int_value);
       });
    }
@@ -837,6 +844,7 @@ void GatePro::setup() {
          if (this->params.size() > 6 && this->params[6] == int_value) {
             return;
          }
+         // Group 7: 0-9 (1=default, 1=2A, 2=3A, 3=4A, 4=5A, 5=6A, 6=7A, 7=8A, 8=9A, 9=10A, A=11A, C=12A, E=13A)
          this->set_param(6, int_value);
       });
    }
@@ -847,6 +855,7 @@ void GatePro::setup() {
          if (this->params.size() > 1 && this->params[1] == int_value) {
             return;
          }
+         // Group 2: 0-8 (0=disabled, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s, 8=180s)
          this->set_param(1, int_value);
       });
    }
@@ -857,27 +866,56 @@ void GatePro::setup() {
          if (this->params.size() > 15 && this->params[15] == (state ? 1 : 0)) {
             return;
          }
+         // Group L: L-0: disabled, L-1: enabled
          this->set_param(15, state ? 1 : 0);
       });
    }
 
-   if (this->sw_infra1) {
-      this->sw_infra1->add_on_state_callback([this](bool state){
-         if (this->params.size() > 13 && this->params[13] == (state ? 1 : 0)) {
-            return;
-         }
-         this->set_param(13, state ? 1 : 0);
-      });
+   // infra1
+  if (this->sw_infra1) {
+    this->sw_infra1->add_on_state_callback([this](bool state){
+        if (this->params.size() > 13 && this->params[13] == (state ? 1 : 0)) {
+          return;
+        }
+        // Group H: H-0: disabled, H-1: enabled
+        this->set_param(13, state ? 1 : 0);
+    });
    }
 
+   // infra2
    if (this->sw_infra2) {
-      this->sw_infra2->add_on_state_callback([this](bool state){
-         if (this->params.size() > 14 && this->params[14] == (state ? 1 : 0)) {
-            return;
-         }
-         this->set_param(14, state ? 1 : 0);
-      });
+    this->sw_infra2->add_on_state_callback([this](bool state){
+      if (this->params.size() > 14 && this->params[14] == (state ? 1 : 0)) {
+        return;
+      }
+      // Group J: J-0: disabled, J-1: enabled
+      this->set_param(14, state ? 1 : 0);
+    });
    }
+
+  // Small gate timer callback
+  if (this->small_gate_timer) {
+      this->small_gate_timer->add_on_state_callback([this](float value){
+        int int_value = (int)value;
+        if (this->params.size() > 7 && this->params[7] == int_value) {
+            return;
+        }
+        // Group 8: 1-6 (1=3s, 2=6s, 3=9s, 4=12s, 5=15s, 6=18s)
+        this->set_param(7, int_value);
+      });
+  }
+
+   // Force detection timer callback
+   if (this->force_detection_number) {
+    this->force_detection_number->add_on_state_callback([this](float value){
+        int int_value = (int)value;
+        if (this->params.size() > 9 && this->params[9] == int_value) {
+            return;
+        }
+       // Group A: 0-3 (0=disabled, 1=Stop + reverse 1mp, 2=Stop + reverse 3mp, 3=Stop + reverse to end)
+       this->set_param(9, int_value);
+    });
+  }  
 }
 
 void GatePro::update() {
