@@ -1,47 +1,57 @@
-##############################################
-# GatePro Boxer Gate Motor - Example Config #
-##############################################
-
-# Basic device configuration
 substitutions:
   devicename: "driveway-gate"
   name: Driveway Gate
-  # Gate SRC code that must be appended to all commands
-  # IMPORTANT: This unique identifier authenticates commands to your specific gate
-  # Each gate has its own unique SRC code - you must use your gate's code here
-  gate_src: "src=P00287D7\r\n"
 
 esphome:
   name: ${devicename}
   friendly_name: ${name}
   project:
     name: esphome.web
-    version: dev  
+    version: dev
+  on_boot:
+    priority: -100
+    then:
+      - delay: 5s
+      - button.press: get_params_btn
+      - delay: 2s
 
 esp32:
   board: wemos_d1_mini32
+  framework:
+    type: arduino
 
-# Include base configuration if you have one
 <<: !include .base.yaml
 
-# IMPORTANT: Disable UART logging for proper operation
+# Enable logging
 logger:
   baud_rate: 0
-  # level: DEBUG  # Uncomment for debugging
+  level: VERBOSE  # Enable verbose logging
+  logs:
+    gatepro: INFO 
 
-# Web interface
 web_server:
   version: 3
 
 captive_portal:
 
-# External components configuration - using local components
 external_components:
-  - source: ../components
-    components: [ gatepro ]
+  - source:
+      type: git
+      url: https://github.com/amargo/esphome_gatepro.git
+      ref: main
+    components: [gatepro]
+    refresh: 0s
 
-# UART configuration - critical for proper communication
+# BLE devices setup
+# esp32_ble_tracker:
+#   scan_parameters:
+#     active: false
+
+# bluetooth_proxy:
+#   active: true
+
 uart:
+  id: uart_bus
   baud_rate: 9600
   tx_pin: GPIO1  # Connect to WHITE wire
   rx_pin: GPIO3  # Connect to BLUE wire

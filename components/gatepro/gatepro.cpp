@@ -171,7 +171,7 @@ void GatePro::process() {
     
     // For position updates, only process them if the gate is in motion
     // This prevents position updates when the gate is stationary
-    if (!this->operation_finished) {
+    // if (!this->operation_finished) {
       // Extract the position value (hex)
       std::string position_hex = msg.substr(16, 2);
       
@@ -192,11 +192,12 @@ void GatePro::process() {
       
       float new_position = (float)percentage / 100;
       
-      // Snap to extremes for stability
-      if (new_position <= 0.05f) {
-        new_position = 0.0f; // Fully open
-      } else if (new_position >= 0.95f) {
-        new_position = 1.0f; // Fully closed
+      if (this->operation_finished && this->current_operation == cover::COVER_OPERATION_IDLE) {
+        if (new_position <= 0.01f) {
+            new_position = 0.0f;
+        } else if (new_position >= 0.99f) {
+            new_position = 1.0f;
+        }
       }
       
       // Update position only while in motion
@@ -205,7 +206,7 @@ void GatePro::process() {
       this->publish_state();
       
       ESP_LOGD(TAG, "Updated position during motion: %.2f", new_position);
-    }
+    // }
     return;
   }
 
@@ -892,7 +893,9 @@ void GatePro::update() {
   this->write_uart();
 
   // If we're in an unknown state or if we need to force an update
-  if (this->gate_state_ == STATE_UNKNOWN || this->force_state_update_) {
+  if (this->gate_state_ == STATE_UNKNOWN || 
+      this->force_state_update_ || 
+      this->current_operation != cover::COVER_OPERATION_IDLE) {
     this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
     this->force_state_update_ = false;
   }
