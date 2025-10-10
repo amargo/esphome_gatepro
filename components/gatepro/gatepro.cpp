@@ -279,6 +279,34 @@ void GatePro::process() {
       return;
     }
   }
+  
+  // Read param example: ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n
+  if (msg.substr(0, 6) == "ACK RP") {
+      this->parse_params(msg);
+      return;
+   }
+
+   // ACK WP example: ACK WP,1\r\n
+   if (msg.substr(0, 6) == "ACK WP") {
+      ESP_LOGD(TAG, "Write params acknowledged");
+      return;
+   }
+
+   // Devinfo example: ACK READ DEVINFO:P500BU,PS21053C,V01\r\n
+   if (msg.substr(0, 16) == "ACK READ DEVINFO") {
+      if (this->txt_devinfo) {
+        this->txt_devinfo->publish_state(msg.substr(17, msg.size() - (17 + 4)));
+      }
+      return;
+   }
+
+   // Learn status example: ACK LEARN STATUS:SYSTEM LEARN COMPLETE,0\r\n
+   if (msg.substr(0, 16) == "ACK LEARN STATUS") {
+      if (this->txt_learn_status) {
+        this->txt_learn_status->publish_state(msg.substr(17, msg.size() - (17 + 4)));
+      }
+      return;
+   }
 }
 // Cover component logic functions
 ////////////////////////////////////////////
@@ -419,33 +447,8 @@ void GatePro::correction_after_operation() {
       }
   }
 
-  // Read param example: ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n
-  if (msg.substr(0, 6) == "ACK RP") {
-      this->parse_params(msg);
-      return;
-   }
-
-   // ACK WP example: ACK WP,1\r\n
-   if (msg.substr(0, 6) == "ACK WP") {
-      ESP_LOGD(TAG, "Write params acknowledged");
-      return;
-   }
-
-   // Devinfo example: ACK READ DEVINFO:P500BU,PS21053C,V01\r\n
-   if (msg.substr(0, 16) == "ACK READ DEVINFO") {
-      if (this->txt_devinfo) {
-        this->txt_devinfo->publish_state(msg.substr(17, msg.size() - (17 + 4)));
-      }
-      return;
-   }
-
-   // Learn status example: ACK LEARN STATUS:SYSTEM LEARN COMPLETE,0\r\n
-   if (msg.substr(0, 16) == "ACK LEARN STATUS") {
-      if (this->txt_learn_status) {
-        this->txt_learn_status->publish_state(msg.substr(17, msg.size() - (17 + 4)));
-      }
-      return;
-   }
+  // This function is called from process() which has access to msg
+  // These message handlers were moved to process() method
 }
 
 void GatePro::stop_at_target_position() {
@@ -740,7 +743,6 @@ void GatePro::setup() {
    this->current_operation = cover::COVER_OPERATION_IDLE;
    this->operation_finished = true;
    this->gate_state_ = STATE_UNKNOWN;
-   this->last_status_request_ = 0;
    this->last_state_change_ = 0;
    this->force_state_update_ = true;
    this->consecutive_position_readings_ = 0;
@@ -798,6 +800,7 @@ void GatePro::setup() {
    }
    
    // Set up number slider callbacks
+   if (this->speed_slider) {
       this->speed_slider->add_on_state_callback([this](float value){
          int int_value = (int)value;
          if (this->params.size() > 3 && this->params[3] == int_value) {
@@ -807,7 +810,7 @@ void GatePro::setup() {
       });
    }
 
-   if (decel_dist_slider) {
+   if (this->decel_dist_slider) {
       this->decel_dist_slider->add_on_state_callback([this](float value){
          int int_value = (int)value;
          if (this->params.size() > 4 && this->params[4] == int_value) {
@@ -817,7 +820,7 @@ void GatePro::setup() {
       });
    }
 
-   if (decel_speed_slider) {
+   if (this->decel_speed_slider) {
       this->decel_speed_slider->add_on_state_callback([this](float value){
          int int_value = (int)value;
          if (this->params.size() > 5 && this->params[5] == int_value) {
@@ -827,7 +830,7 @@ void GatePro::setup() {
       });
    }
 
-   if (max_amp_slider) {
+   if (this->max_amp_slider) {
       this->max_amp_slider->add_on_state_callback([this](float value){
          int int_value = (int)value;
          if (this->params.size() > 6 && this->params[6] == int_value) {
@@ -837,7 +840,7 @@ void GatePro::setup() {
       });
    }
 
-   if (auto_close_slider) {
+   if (this->auto_close_slider) {
       this->auto_close_slider->add_on_state_callback([this](float value){
          int int_value = (int)value;
          if (this->params.size() > 1 && this->params[1] == int_value) {
@@ -848,7 +851,7 @@ void GatePro::setup() {
    }
 
    // Set up switch callbacks
-   if (sw_permalock) {
+   if (this->sw_permalock) {
       this->sw_permalock->add_on_state_callback([this](bool state){
          if (this->params.size() > 15 && this->params[15] == (state ? 1 : 0)) {
             return;
@@ -857,7 +860,7 @@ void GatePro::setup() {
       });
    }
 
-   if (sw_infra1) {
+   if (this->sw_infra1) {
       this->sw_infra1->add_on_state_callback([this](bool state){
          if (this->params.size() > 13 && this->params[13] == (state ? 1 : 0)) {
             return;
@@ -866,7 +869,7 @@ void GatePro::setup() {
       });
    }
 
-   if (sw_infra2) {
+   if (this->sw_infra2) {
       this->sw_infra2->add_on_state_callback([this](bool state){
          if (this->params.size() > 14 && this->params[14] == (state ? 1 : 0)) {
             return;
