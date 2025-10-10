@@ -103,7 +103,7 @@ substitutions:
   # Gate SRC code that must be appended to all commands
   # IMPORTANT: This unique identifier authenticates commands to your specific gate
   # Each gate has its own unique SRC code - you must use your gate's code here
-  gate_src: "src=P00287D7\r\n"
+  gate_src: "P00287D7"
 
 esphome:
   name: ${devicename}
@@ -149,6 +149,7 @@ uart:
 
 cover:
   - platform: gatepro
+    source: "${gate_src}"
     name: "${name}"
     device_class: gate
     update_interval: 0.5s
@@ -161,58 +162,58 @@ button:
     entity_category: "diagnostic"
   - platform: uart
     name: "Gate Open"
-    data: "FULL OPEN;${gate_src}"
+    data: "FULL OPEN;src=${gate_src}\r\n"
     entity_category: "diagnostic"
   - platform: uart
     name: "Gate Close"
-    data: "FULL CLOSE;${gate_src}"
+    data: "FULL CLOSE;src=${gate_src}\r\n"
     entity_category: "diagnostic"
   - platform: uart
     name: "Gate Stop"
-    data: "RS;${gate_src}"
+    data: "RS;src=${gate_src}\r\n"
     entity_category: diagnostic    
 
   # Learn operation buttons
   - platform: uart
     name: "AUTO LEARN"
-    data: "AUTO LEARN;${gate_src}"
+    data: "AUTO LEARN;src=${gate_src}\r\n"
     entity_category: "diagnostic"
   - platform: uart
     name: "READ LEARN STATUS"
-    data: "READ LEARN STATUS;${gate_src}"
+    data: "READ LEARN STATUS;src=${gate_src}\r\n"
     entity_category: "diagnostic"
 
   # Parameter buttons
   - platform: uart
     name: "RP btn (read params)"
-    data: "RP,1:;${gate_src}"
+    data: "RP,1:;src=${gate_src}\r\n"
     entity_category: "diagnostic"
 
   # Advanced control examples
   # Speed control
   - platform: uart
     name: "Operating Speed 50 %"
-    data: "WP,4:1;${gate_src}"    # 4-1 = 50 %
+    data: "WP,4:1;src=${gate_src}\r\n"    # 4-1 = 50 %
     entity_category: "diagnostic"
   - platform: uart
     name: "Operating Speed 100 %"
-    data: "WP,4:4;${gate_src}"    # 4-4 = 100 %
+    data: "WP,4:4;src=${gate_src}\r\n"    # 4-4 = 100 %
     entity_category: "diagnostic"
 
   # Auto-closing function
   - platform: uart
     name: "Auto-close OFF"
-    data: "WP,2:0;${gate_src}"    # 2-0 = disabled
+    data: "WP,2:0;src=${gate_src}\r\n"    # 2-0 = disabled
     entity_category: "diagnostic"
   - platform: uart
     name: "Auto-close 60 s"
-    data: "WP,2:5;${gate_src}"    # 2-5 = 60 seconds
+    data: "WP,2:5;src=${gate_src}\r\n"    # 2-5 = 60 seconds
     entity_category: "diagnostic"
 
   # Pedestrian gate function
   - platform: uart
     name: "Pedestrian 6 s"
-    data: "WP,8:2;${gate_src}"    # 8-2 = 6 seconds (default)
+    data: "WP,8:2;src=${gate_src}\r\n"    # 8-2 = 6 seconds (default)
     entity_category: "diagnostic"
 
 # Sensors
