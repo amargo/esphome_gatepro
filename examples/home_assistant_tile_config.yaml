@@ -1,13 +1,12 @@
-# Home Assistant Dashboard Tile Configuration for GatePro Gate
-# Simply copy this code to your Home Assistant dashboard
-# (In edit mode: "+ Add Card" > "Manual")
+# GatePro Gate Control Dashboard
+# Copy this YAML to Home Assistant Dashboard
 
 type: vertical-stack
 cards:
-  # Gate control tile
+  # Main Gate Control
   - type: tile
-    entity: cover.driveway_gate
-    name: Gate Open/Close
+    entity: cover.driveway_gate_driveway_gate
+    name: Gate Control
     features:
       - type: cover-open-close
       - type: cover-position
@@ -18,51 +17,93 @@ cards:
     show_entity_picture: true
     vertical: true
     features_position: bottom
+    secondary_info: last_changed
     
-  # Gate information card
+  # Basic Controls
   - type: entities
-    title: Gate Status Information
     show_header_toggle: false
     entities:
-      - entity: cover.driveway_gate
-        name: Gate Position
-        secondary_info: last-changed
-      - type: section
-        label: Operations
-      - entity: cover.driveway_gate
-        type: attribute
-        attribute: current_operation
-        name: Current Operation
-        icon: mdi:gate
       - type: section
         label: Controls
-      - entity: button.gate_open
+      - entity: button.driveway_gate_gate_open
         name: Open
         icon: mdi:gate-open
-      - entity: button.gate_close
+      - entity: button.driveway_gate_gate_close
         name: Close
         icon: mdi:gate
-      - entity: button.gate_stop
+      - entity: button.driveway_gate_gate_stop
         name: Stop
         icon: mdi:stop-circle-outline
-
-# Note: You'll need to create template sensors in Home Assistant to display the log information
-# Example template sensor configuration:
-# sensor:
-#   - platform: template
-#     sensors:
-#       driveway_gate_last_operation:
-#         friendly_name: "Last Gate Operation"
-#         value_template: "{{ states('sensor.esphome_driveway_gate_logs') | regex_findall('Gate state: (\\w+)') | last }}"
-#       driveway_gate_operation_duration:
-#         friendly_name: "Gate Operation Duration"
-#         value_template: "{{ states('sensor.esphome_driveway_gate_logs') | regex_findall('Last operation duration: ([0-9.]+)') | last }}"
-#         unit_of_measurement: "seconds"
-#   
-# binary_sensor:
-#   - platform: template
-#     sensors:
-#       driveway_gate_open_too_long:
-#         friendly_name: "Gate Open Too Long"
-#         value_template: "{{ 'Gate open for extended period' in states('sensor.esphome_driveway_gate_logs') }}"
-#         device_class: problem
+        
+  # Advanced Functions
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - type: section
+        label: Advanced
+      - entity: button.driveway_gate_auto_learn
+        name: Auto Learn
+        icon: mdi:school
+      - entity: button.driveway_gate_get_parameters
+        name: Get Parameters
+        icon: mdi:download
+      - entity: button.driveway_gate_learn_remote
+        name: Learn Remote
+        icon: mdi:remote
+        
+  # Motor Parameters
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - type: section
+        label: Motor Settings
+      - entity: number.driveway_gate_operation_speed
+        name: Speed
+        icon: mdi:speedometer
+      - entity: number.driveway_gate_deceleration_distance
+        name: Decel Distance
+        icon: mdi:arrow-collapse-horizontal
+      - entity: number.driveway_gate_deceleration_speed
+        name: Decel Speed
+        icon: mdi:speedometer-slow
+      - entity: number.driveway_gate_maximum_current_torque
+        name: Max Current
+        icon: mdi:current-ac
+      - entity: number.driveway_gate_auto_close_timer
+        name: Auto Close (sec)
+        icon: mdi:timer
+        
+  # Safety Settings
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - type: section
+        label: Safety
+      - entity: switch.driveway_gate_permanent_lock
+        name: Permanent Lock
+        icon: mdi:lock
+      - entity: switch.driveway_gate_infrared_sensor_1
+        name: IR Sensor 1
+        icon: mdi:eye
+      # - entity: switch.driveway_gate_infrared_sensor_2
+      #   name: IR Sensor 2
+      #   icon: mdi:eye-outline
+        
+  # Status Info
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - type: section
+        label: Status
+      - entity: sensor.driveway_gate_device_info
+        name: Device Info
+        icon: mdi:information
+      # - entity: sensor.driveway_gate_learn_status
+      #   name: Learn Status
+      #   icon: mdi:school
+      - entity: sensor.driveway_gate_wifi_signal_db_sensor
+        name: WiFi Signal
+        icon: mdi:wifi
+      - entity: sensor.driveway_gate_uptime_sensor
+        name: Uptime
+        icon: mdi:clock-outline

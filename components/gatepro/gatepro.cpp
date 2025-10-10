@@ -1,5 +1,7 @@
 #include "esphome/core/log.h"
 #include "gatepro.h"
+#include <vector>
+#include <functional>
 
 namespace esphome {
 namespace gatepro {
@@ -7,12 +9,41 @@ namespace gatepro {
 ////////////////////////////////////
 static const char* TAG = "gatepro";
 
-
 ////////////////////////////////////////////
 // Helper / misc functions
 ////////////////////////////////////////////
+std::string GatePro::get_command_string(GateProCmd cmd) {
+   static char cmd_buffer[100];
+   
+   auto it = GateProCmdTemplates.find(cmd);
+   if (it == GateProCmdTemplates.end()) {
+      ESP_LOGE(TAG, "Unknown command type: %d", cmd);
+      return "";
+   }
+   
+   const char* template_str = it->second;
+   
+   // Special case for WRITE_PARAMS - no source parameter needed
+   if (cmd == GATEPRO_CMD_WRITE_PARAMS) {
+      return std::string(template_str);
+   }
+   
+   // Format with source parameter
+   snprintf(cmd_buffer, sizeof(cmd_buffer), template_str, this->source_.c_str());
+   return std::string(cmd_buffer);
+}
+
 void GatePro::queue_gatepro_cmd(GateProCmd cmd) {
-  this->tx_queue.push(this->get_command_string(cmd));
+   std::string cmd_str = this->get_command_string(cmd);
+   if (!cmd_str.empty()) {
+      // Prevent queue overflow
+      if (this->tx_queue.size() >= MAX_QUEUE_SIZE) {
+         ESP_LOGW(TAG, "TX queue full, dropping oldest command");
+         this->tx_queue.pop();
+      }
+      this->tx_queue.push(cmd_str);
+      ESP_LOGD(TAG, "Queued command: %s (queue size: %zu)", cmd_str.c_str(), this->tx_queue.size());
+   }
 }
 
 void GatePro::publish() {
@@ -140,7 +171,7 @@ void GatePro::process() {
     
     // For position updates, only process them if the gate is in motion
     // This prevents position updates when the gate is stationary
-    if (!this->operation_finished) {
+    // if (!this->operation_finished) {
       // Extract the position value (hex)
       std::string position_hex = msg.substr(16, 2);
       
@@ -161,11 +192,12 @@ void GatePro::process() {
       
       float new_position = (float)percentage / 100;
       
-      // Snap to extremes for stability
-      if (new_position <= 0.05f) {
-        new_position = 0.0f; // Fully open
-      } else if (new_position >= 0.95f) {
-        new_position = 1.0f; // Fully closed
+      if (this->operation_finished && this->current_operation == cover::COVER_OPERATION_IDLE) {
+        if (new_position <= 0.01f) {
+            new_position = 0.0f;
+        } else if (new_position >= 0.99f) {
+            new_position = 1.0f;
+        }
       }
       
       // Update position only while in motion
@@ -174,7 +206,7 @@ void GatePro::process() {
       this->publish_state();
       
       ESP_LOGD(TAG, "Updated position during motion: %.2f", new_position);
-    }
+    // }
     return;
   }
 
@@ -248,6 +280,34 @@ void GatePro::process() {
       return;
     }
   }
+  
+  // Read param example: ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n
+  if (msg.substr(0, 6) == "ACK RP") {
+      this->parse_params(msg);
+      return;
+   }
+
+   // ACK WP example: ACK WP,1\r\n
+   if (msg.substr(0, 6) == "ACK WP") {
+      ESP_LOGD(TAG, "Write params acknowledged");
+      return;
+   }
+
+   // Devinfo example: ACK READ DEVINFO:P500BU,PS21053C,V01\r\n
+   if (msg.substr(0, 16) == "ACK READ DEVINFO") {
+      if (this->txt_devinfo) {
+        this->txt_devinfo->publish_state(msg.substr(17, msg.size() - (17 + 4)));
+      }
+      return;
+   }
+
+   // Learn status example: ACK LEARN STATUS:SYSTEM LEARN COMPLETE,0\r\n
+   if (msg.substr(0, 16) == "ACK LEARN STATUS") {
+      if (this->txt_learn_status) {
+        this->txt_learn_status->publish_state(msg.substr(17, msg.size() - (17 + 4)));
+      }
+      return;
+   }
 }
 // Cover component logic functions
 ////////////////////////////////////////////
@@ -386,7 +446,10 @@ void GatePro::correction_after_operation() {
           this->position != cover::COVER_OPEN) {
         this->position = cover::COVER_OPEN;
       }
-    }
+  }
+
+  // This function is called from process() which has access to msg
+  // These message handlers were moved to process() method
 }
 
 void GatePro::stop_at_target_position() {
@@ -458,30 +521,75 @@ void GatePro::log_state_change(GateProState old_state, GateProState new_state) {
   ESP_LOGI(TAG, "Gate state changed: %s -> %s", old_state_str, new_state_str);
   this->last_state_change_ = millis();
 }
-
 ////////////////////////////////////////////
 // UART operations
 ////////////////////////////////////////////
 
 void GatePro::read_uart() {
-  int available = this->available();
-  if (!available) {
-      return;
-  }
-  
-  uint8_t* bytes = new uint8_t[available];
-  this->read_array(bytes, available);
-  this->preprocess(this->convert(bytes, available));
-  delete[] bytes;
+    // Check if anything on UART buffer
+    int available = this->available();
+    if (!available) {
+        return;
+    }
+    
+    // Buffer overflow protection - clear if too large
+    if (this->msg_buff.length() > MAX_UART_BUFFER_SIZE) {
+        ESP_LOGW(TAG, "UART buffer overflow (%zu bytes), clearing buffer", this->msg_buff.length());
+        this->msg_buff.clear();
+    }
+    
+    // Use stack-based buffer to avoid dynamic allocation
+    uint8_t bytes[UART_READ_BUFFER_SIZE];
+    int to_read = std::min(available, (int)UART_READ_BUFFER_SIZE);
+    
+    // Read available data in chunks if necessary
+    while (available > 0 && this->msg_buff.length() < MAX_UART_BUFFER_SIZE) {
+        int chunk_size = std::min(available, (int)UART_READ_BUFFER_SIZE);
+        this->read_array(bytes, chunk_size);
+        this->msg_buff += this->convert(bytes, chunk_size);
+        available -= chunk_size;
+        
+        // Update available count
+        available = this->available();
+    }
+
+    // Process all complete messages in the buffer
+    size_t pos;
+    int processed_messages = 0;
+    const int MAX_MESSAGES_PER_CYCLE = 5; // Prevent infinite loops
+    
+    while ((pos = this->msg_buff.find(this->delimiter)) != std::string::npos && 
+           processed_messages < MAX_MESSAGES_PER_CYCLE) {
+        
+        // Extract complete message
+        std::string complete_msg = this->msg_buff.substr(0, pos + this->delimiter_length);
+        
+        // Add to processing queue
+        this->rx_queue.push(complete_msg);
+        
+        // Remove processed message from buffer
+        this->msg_buff = this->msg_buff.substr(pos + this->delimiter_length);
+        
+        processed_messages++;
+        
+        ESP_LOGD(TAG, "Processed message %d: %s", processed_messages, complete_msg.c_str());
+    }
+    
+    // Log if we hit the message limit
+    if (processed_messages >= MAX_MESSAGES_PER_CYCLE) {
+        ESP_LOGD(TAG, "Processed maximum messages per cycle (%d), remaining buffer: %zu bytes", 
+                 MAX_MESSAGES_PER_CYCLE, this->msg_buff.length());
+    }
 }
 
 void GatePro::write_uart() {
-  if (this->tx_queue.size()) {
-    const char* msg = this->tx_queue.front();
-    this->write_str(msg);
-    ESP_LOGD(TAG, "UART TX: %s", msg);
-    this->tx_queue.pop();
-  }
+   if (this->tx_queue.size()) {
+      std::string cmd_str = this->tx_queue.front();
+      cmd_str += this->tx_delimiter;
+      this->write_str(cmd_str.c_str());
+      ESP_LOGD(TAG, "UART TX[%d]: %s", this->tx_queue.size(), cmd_str.c_str());
+      this->tx_queue.pop();
+   }
 }
 
 std::string GatePro::convert(uint8_t* bytes, size_t len) {
@@ -521,37 +629,99 @@ std::string GatePro::convert(uint8_t* bytes, size_t len) {
   return res;
 }
 
-void GatePro::preprocess(std::string msg) {
-    // Check for direct commands from ESPHome UART buttons
-    if (msg.substr(0, 9) == "FULL OPEN") {
-        ESP_LOGI(TAG, "Received direct FULL OPEN command");
-        this->queue_gatepro_cmd(GATEPRO_CMD_OPEN);
-        return;
-    } else if (msg.substr(0, 10) == "FULL CLOSE") {
-        ESP_LOGI(TAG, "Received direct FULL CLOSE command");
-        this->queue_gatepro_cmd(GATEPRO_CMD_CLOSE);
-        return;
-    } else if (msg.substr(0, 2) == "RS") {
-        ESP_LOGI(TAG, "Received direct RS command");
-        this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
-        return;
-    } else if (msg.substr(0, 4) == "STOP") {
-        ESP_LOGI(TAG, "Received direct STOP command");
-        this->queue_gatepro_cmd(GATEPRO_CMD_STOP);
-        return;
-    }
-    
-    // Normal message processing
-    uint8_t delimiter_location = msg.find(this->delimiter);
-    uint8_t msg_length = msg.length();
-    if (msg_length > delimiter_location + this->delimiter_length) {
-        std::string msg1 = msg.substr(0, delimiter_location + this->delimiter_length);
-        this->rx_queue.push(msg1);
-        std::string msg2 = msg.substr(delimiter_location + this->delimiter_length);
-        this->preprocess(msg2);
-        return;
-    }
-    this->rx_queue.push(msg);
+////////////////////////////////////////////
+// Parameter functions
+////////////////////////////////////////////
+void GatePro::set_param(int idx, int val) {
+   ESP_LOGD(TAG, "Initiating setting param %d to %d", idx, val);
+   
+   // Validate parameter index
+   if (idx < 0 || idx >= 17) {  // GatePro has 17 parameters (0-16)
+      ESP_LOGE(TAG, "Invalid parameter index: %d (valid range: 0-16)", idx);
+      return;
+   }
+   
+   this->param_no_pub = true;
+   this->queue_gatepro_cmd(GATEPRO_CMD_READ_PARAMS);
+
+   this->paramTaskQueue.push(
+      [this, idx, val](){
+         ESP_LOGD(TAG, "Setting param %d to %d", idx, val);
+         // Ensure params vector is large enough
+         if (this->params.size() <= idx) {
+            this->params.resize(idx + 1, 0);
+         }
+         this->params[idx] = val;
+         this->write_params();
+      });
+}
+
+void GatePro::publish_params() {
+   if (!this->param_no_pub && this->params.size() >= 16) {  // Ensure we have enough parameters
+      // Safely publish parameters with bounds checking
+      if (this->speed_slider && this->params.size() > 3) 
+         this->speed_slider->publish_state(this->params[3]);
+      if (this->decel_dist_slider && this->params.size() > 4) 
+         this->decel_dist_slider->publish_state(this->params[4]);
+      if (this->decel_speed_slider && this->params.size() > 5) 
+         this->decel_speed_slider->publish_state(this->params[5]);
+      if (this->max_amp_slider && this->params.size() > 6) 
+         this->max_amp_slider->publish_state(this->params[6]);
+      if (this->auto_close_slider && this->params.size() > 1) 
+         this->auto_close_slider->publish_state(this->params[1]);
+      if (this->sw_permalock && this->params.size() > 15) 
+         this->sw_permalock->publish_state(this->params[15]);
+      if (this->sw_infra1 && this->params.size() > 13) 
+         this->sw_infra1->publish_state(this->params[13]);
+      if (this->sw_infra2 && this->params.size() > 14) 
+         this->sw_infra2->publish_state(this->params[14]);
+   }
+}
+
+void GatePro::parse_params(std::string msg) {
+   this->params.clear();
+   // example: ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n
+   //                   ^-9  
+   msg = msg.substr(9, 33);
+   size_t start = 0;
+   size_t end;
+
+   // efficiently split on ','
+   while((end = msg.find(',', start)) != std::string::npos) {
+      this->params.push_back(stoi(msg.substr(start, end - start)));
+      start = end + 1;
+   }
+   this->params.push_back(stoi(msg.substr(start)));
+
+   ESP_LOGD(TAG, "Parsed current params: %zu", this->params.size());
+   for (size_t i = 0; i < this->params.size(); ++i) {
+      ESP_LOGD(TAG, "  [%zu] = %d", i, this->params[i]);
+   }
+
+   this->publish_params();
+
+   // write new params if any task is up
+   while (!this->paramTaskQueue.empty()) {
+      auto task = this->paramTaskQueue.front();
+      this->paramTaskQueue.pop();
+      task();
+      this->param_no_pub = false;
+   }
+}
+
+void GatePro::write_params() {
+   std::string msg = "WP,1:";
+   for (size_t i = 0; i < this->params.size(); i++) {
+      msg += std::to_string(this->params[i]);
+      if (i != this->params.size() -1) {
+         msg += ",";
+      }
+   }
+   ESP_LOGD(TAG, "BUILT PARAMS: %s", msg.c_str());
+   this->tx_queue.push(msg);
+
+   // read params again just to update frontend and make sure :)
+   this->queue_gatepro_cmd(GATEPRO_CMD_READ_PARAMS);
 }
 
 ////////////////////////////////////////////
@@ -569,21 +739,145 @@ cover::CoverTraits GatePro::get_traits() {
 }
 
 void GatePro::setup() {
-  ESP_LOGD(TAG, "Setting up GatePro component..");
-  this->last_operation_ = cover::COVER_OPERATION_CLOSING;
-  this->current_operation = cover::COVER_OPERATION_IDLE;
-  this->operation_finished = true;
-  this->gate_state_ = STATE_UNKNOWN;
-  this->last_status_request_ = 0;
-  this->last_state_change_ = 0;
-  this->force_state_update_ = true;
-  this->consecutive_position_readings_ = 0;
-  this->last_position_reading_ = -1.0f;
-  this->last_pattern_seen_ = "";
-  this->consecutive_pattern_readings_ = 0;
-  this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
-  this->blocker = false;
-  this->target_position_ = 0.0f;
+   ESP_LOGD(TAG, "Setting up GatePro component..");
+   this->last_operation_ = cover::COVER_OPERATION_CLOSING;
+   this->current_operation = cover::COVER_OPERATION_IDLE;
+   this->operation_finished = true;
+   this->gate_state_ = STATE_UNKNOWN;
+   this->last_state_change_ = 0;
+   this->force_state_update_ = true;
+   this->consecutive_position_readings_ = 0;
+   this->last_position_reading_ = -1.0f;
+   this->last_pattern_seen_ = "";
+   this->consecutive_pattern_readings_ = 0;
+   this->msg_buff = "";
+   this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
+   this->blocker = false;
+   this->target_position_ = 0.0f;
+   
+   // Initialize parameter system
+   this->queue_gatepro_cmd(GATEPRO_CMD_READ_PARAMS);
+   this->queue_gatepro_cmd(GATEPRO_CMD_DEVINFO);
+   this->queue_gatepro_cmd(GATEPRO_CMD_READ_LEARN_STATUS);
+
+   // Setup basic operation button callbacks
+   if (this->btn_open) {
+      this->btn_open->add_on_press_callback([this]() {
+         ESP_LOGD(TAG, "Open button pressed");
+         this->queue_gatepro_cmd(GATEPRO_CMD_OPEN);
+      });
+   }
+   if (this->btn_close) {
+      this->btn_close->add_on_press_callback([this]() {
+         ESP_LOGD(TAG, "Close button pressed");
+         this->queue_gatepro_cmd(GATEPRO_CMD_CLOSE);
+      });
+   }
+   if (this->btn_stop) {
+      this->btn_stop->add_on_press_callback([this]() {
+         ESP_LOGD(TAG, "Stop button pressed");
+         this->queue_gatepro_cmd(GATEPRO_CMD_STOP);
+      });
+   }
+   
+   // Setup advanced button callbacks
+   if (this->btn_learn) {
+      this->btn_learn->add_on_press_callback([this]() {
+         ESP_LOGD(TAG, "Learn button pressed");
+         this->queue_gatepro_cmd(GATEPRO_CMD_LEARN);
+      });
+   }
+   if (this->btn_params_od) {
+      this->btn_params_od->add_on_press_callback([this]() {
+         ESP_LOGD(TAG, "Params OD button pressed");
+         this->queue_gatepro_cmd(GATEPRO_CMD_READ_PARAMS);
+      });
+   }
+   if (this->btn_remote_learn) {
+      this->btn_remote_learn->add_on_press_callback([this]() {
+         ESP_LOGD(TAG, "Remote learn button pressed");
+         this->queue_gatepro_cmd(GATEPRO_CMD_REMOTE_LEARN);
+      });
+   }
+   
+   // Set up number slider callbacks
+   if (this->speed_slider) {
+      this->speed_slider->add_on_state_callback([this](float value){
+         int int_value = (int)value;
+         if (this->params.size() > 3 && this->params[3] == int_value) {
+            return;
+         }
+         this->set_param(3, int_value);
+      });
+   }
+
+   if (this->decel_dist_slider) {
+      this->decel_dist_slider->add_on_state_callback([this](float value){
+         int int_value = (int)value;
+         if (this->params.size() > 4 && this->params[4] == int_value) {
+            return;
+         }
+         this->set_param(4, int_value);
+      });
+   }
+
+   if (this->decel_speed_slider) {
+      this->decel_speed_slider->add_on_state_callback([this](float value){
+         int int_value = (int)value;
+         if (this->params.size() > 5 && this->params[5] == int_value) {
+            return;
+         }
+         this->set_param(5, int_value);
+      });
+   }
+
+   if (this->max_amp_slider) {
+      this->max_amp_slider->add_on_state_callback([this](float value){
+         int int_value = (int)value;
+         if (this->params.size() > 6 && this->params[6] == int_value) {
+            return;
+         }
+         this->set_param(6, int_value);
+      });
+   }
+
+   if (this->auto_close_slider) {
+      this->auto_close_slider->add_on_state_callback([this](float value){
+         int int_value = (int)value;
+         if (this->params.size() > 1 && this->params[1] == int_value) {
+            return;
+         }
+         this->set_param(1, int_value);
+      });
+   }
+
+   // Set up switch callbacks
+   if (this->sw_permalock) {
+      this->sw_permalock->add_on_state_callback([this](bool state){
+         if (this->params.size() > 15 && this->params[15] == (state ? 1 : 0)) {
+            return;
+         }
+         this->set_param(15, state ? 1 : 0);
+      });
+   }
+
+   if (this->sw_infra1) {
+      this->sw_infra1->add_on_state_callback([this](bool state){
+         if (this->params.size() > 13 && this->params[13] == (state ? 1 : 0)) {
+            return;
+         }
+         this->set_param(13, state ? 1 : 0);
+      });
+   }
+
+   if (this->sw_infra2) {
+      this->sw_infra2->add_on_state_callback([this](bool state){
+         if (this->params.size() > 14 && this->params[14] == (state ? 1 : 0)) {
+            return;
+         }
+         this->set_param(14, state ? 1 : 0);
+      });
+   }
 }
 
 void GatePro::update() {
@@ -599,7 +893,9 @@ void GatePro::update() {
   this->write_uart();
 
   // If we're in an unknown state or if we need to force an update
-  if (this->gate_state_ == STATE_UNKNOWN || this->force_state_update_) {
+  if (this->gate_state_ == STATE_UNKNOWN || 
+      this->force_state_update_ || 
+      this->current_operation != cover::COVER_OPERATION_IDLE) {
     this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
     this->force_state_update_ = false;
   }

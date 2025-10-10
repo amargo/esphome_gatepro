@@ -1,47 +1,57 @@
-##############################################
-# GatePro Boxer Gate Motor - Example Config #
-##############################################
-
-# Basic device configuration
 substitutions:
   devicename: "driveway-gate"
   name: Driveway Gate
-  # Gate SRC code that must be appended to all commands
-  # IMPORTANT: This unique identifier authenticates commands to your specific gate
-  # Each gate has its own unique SRC code - you must use your gate's code here
-  gate_src: "src=P00287D7\r\n"
 
 esphome:
   name: ${devicename}
   friendly_name: ${name}
   project:
     name: esphome.web
-    version: dev  
+    version: dev
+  on_boot:
+    priority: -100
+    then:
+      - delay: 5s
+      - button.press: get_params_btn
+      - delay: 2s
 
 esp32:
   board: wemos_d1_mini32
+  framework:
+    type: arduino
 
-# Include base configuration if you have one
 <<: !include .base.yaml
 
-# IMPORTANT: Disable UART logging for proper operation
+# Enable logging
 logger:
   baud_rate: 0
-  # level: DEBUG  # Uncomment for debugging
+  level: VERBOSE  # Enable verbose logging
+  logs:
+    gatepro: INFO 
 
-# Web interface
 web_server:
   version: 3
 
 captive_portal:
 
-# External components configuration - using local components
 external_components:
-  - source: ../components
-    components: [ gatepro ]
+  - source:
+      type: git
+      url: https://github.com/amargo/esphome_gatepro.git
+      ref: main
+    components: [gatepro]
+    refresh: 0s
 
-# UART configuration - critical for proper communication
+# BLE devices setup
+# esp32_ble_tracker:
+#   scan_parameters:
+#     active: false
+
+# bluetooth_proxy:
+#   active: true
+
 uart:
+  id: uart_bus
   baud_rate: 9600
   tx_pin: GPIO1  # Connect to WHITE wire
   rx_pin: GPIO3  # Connect to BLUE wire
@@ -52,61 +62,79 @@ uart:
       - lambda: |-
           UARTDebug::log_string(direction, bytes);
 
-# Gate cover component
+# Gate cover component with parameter controls
 cover:
   - platform: gatepro
     name: "${name}"
     device_class: gate
     update_interval: 0.2s  # Faster updates for more responsive UI
-    source: "${gate_src}"
+    source: "P00287D7"  # Default source ID
+    
+    # Basic operation buttons
+    open: open_btn
+    close: close_btn
+    stop: stop_btn
 
-# Control buttons
+    # Button components
+    set_learn: auto_learn_btn
+    get_params: get_params_btn
+    remote_learn: remote_learn_btn
+    
+    # Number slider components (parameter groups)
+    set_speed: speed_slider              # group 3 - Operation speed
+    set_decel_dist: decel_dist_slider    # group 4 - Deceleration distance
+    set_decel_speed: decel_speed_slider  # group 5 - Deceleration speed
+    set_max_amp: max_amp_slider          # group 6 - Maximum current/torque
+    set_auto_close: auto_close_slider    # group 1 - Auto close timer
+    
+    # Text sensor components
+    txt_devinfo: devinfo_sensor          # Device information
+    txt_learn_status: learn_status_sensor # Learn status information
+    
+    # Switch components (parameter groups)
+    sw_permalock: permalock_switch       # group 15 - Permanent lock
+    sw_infra1: infra1_switch            # group 13 - Infrared sensor 1
+    sw_infra2: infra2_switch            # group 14 - Infrared sensor 2
+
+# Parameter control buttons
 button:
   # System buttons
   - platform: restart
     name: "Reboot"
     id: reboot_btn
     entity_category: "diagnostic"
-    
-  # Basic operation
-  - platform: uart
+
+  # Basic operation buttons (integrated with cover component)
+  - platform: template
     name: "Gate Open"
-    data: "FULL OPEN;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
+    id: open_btn
+    entity_category: "config"
+    
+  - platform: template
     name: "Gate Close"
-    data: "FULL CLOSE;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
+    id: close_btn
+    entity_category: "config"
+    
+  - platform: template
     name: "Gate Stop"
-    data: "STOP;${gate_src}"
-    entity_category: diagnostic
+    id: stop_btn
+    entity_category: "config"
 
-  # Parameter examples with codes in name
-  - platform: uart
-    name: "Auto-close 5s (2:1)"
-    data: "WP,2:1;${gate_src}"
-    entity_category: diagnostic
-  - platform: uart
-    name: "Torque Reaction Stop (A:0)"
-    data: "WP,A:0;${gate_src}"
-    entity_category: diagnostic
-
-  # Learn operation
-  - platform: uart
-    name: "AUTO LEARN"
-    data: "AUTO LEARN;${gate_src}"
-    entity_category: "diagnostic"
-  - platform: uart
-    name: "READ LEARN STATUS"
-    data: "READ LEARN STATUS;${gate_src}"
-    entity_category: "diagnostic"
-
-  # params # ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n"
-  - platform: uart
-    name: "RP btn (read params)"
-    data: "RP,1:;${gate_src}"
-    entity_category: "diagnostic"
+  # GatePro control buttons
+  - platform: template
+    name: "Auto Learn"
+    id: auto_learn_btn
+    entity_category: "config"
+    
+  - platform: template
+    name: "Get Parameters"
+    id: get_params_btn
+    entity_category: "config"
+    
+  - platform: template
+    name: "Learn Remote"
+    id: remote_learn_btn
+    entity_category: "config"
 
 # Diagnostic sensors
 sensor:
@@ -122,8 +150,85 @@ sensor:
     update_interval: 60s
     entity_category: "diagnostic"
 
+# Parameter control sliders
+number:
+  - platform: template
+    name: "Operation Speed"
+    id: speed_slider
+    min_value: 0
+    max_value: 3
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+  - platform: template
+    name: "Deceleration Distance"
+    id: decel_dist_slider
+    min_value: 0
+    max_value: 4
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+  - platform: template
+    name: "Deceleration Speed"
+    id: decel_speed_slider
+    min_value: 0
+    max_value: 3
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+  - platform: template
+    name: "Maximum Current (Torque)"
+    id: max_amp_slider
+    min_value: 0
+    max_value: 8
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+  - platform: template
+    name: "Auto Close Timer"
+    id: auto_close_slider
+    min_value: 0
+    max_value: 7
+    step: 1
+    optimistic: true
+    entity_category: "config"
+
+# Parameter control switches
+switch:
+  - platform: template
+    name: "Permanent Lock"
+    id: permalock_switch
+    optimistic: true
+    entity_category: "config"
+    
+  - platform: template
+    name: "Infrared Sensor 1"
+    id: infra1_switch
+    optimistic: true
+    entity_category: "config"
+    
+  - platform: template
+    name: "Infrared Sensor 2"
+    id: infra2_switch
+    optimistic: true
+    entity_category: "config"
+
 text_sensor:
   - platform: version
     name: "ESPHome Version"
     id: esphome_version
+    entity_category: "diagnostic"
+    
+  - platform: template
+    name: "Device Info"
+    id: devinfo_sensor
+    entity_category: "diagnostic"
+    
+  - platform: template
+    name: "Learn Status"
+    id: learn_status_sensor
     entity_category: "diagnostic"
