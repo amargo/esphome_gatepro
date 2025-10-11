@@ -675,10 +675,10 @@ void GatePro::publish_params() {
          this->sw_infra1->publish_state(this->params[13]);
       if (this->sw_infra2 && this->params.size() > 14) 
          this->sw_infra2->publish_state(this->params[14]);
-      if (this->small_gate_timer && this->params.size() > 8) 
-        this->small_gate_timer->publish_state(this->params[8]);
-      if (this->force_detection_number && this->params.size() > 10) 
-        this->force_detection_number->publish_state(this->params[10]);
+      if (this->small_gate_timer && this->params.size() > 7) 
+        this->small_gate_timer->publish_state(this->params[7]);
+      if (this->force_detection_number && this->params.size() > 9) 
+        this->force_detection_number->publish_state(this->params[9]);
    }
 }
 
