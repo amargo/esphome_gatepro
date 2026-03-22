@@ -436,6 +436,7 @@ void GatePro::correction_after_operation() {
     if (this->operation_finished) {
       if (this->current_operation == cover::COVER_OPERATION_IDLE &&
           this->last_operation_ == cover::COVER_OPERATION_CLOSING &&
+          this->target_position_ == cover::COVER_CLOSED &&
           this->position != cover::COVER_CLOSED) {
         this->position = cover::COVER_CLOSED;
         return;
@@ -443,6 +444,7 @@ void GatePro::correction_after_operation() {
 
       if (this->current_operation == cover::COVER_OPERATION_IDLE &&
           this->last_operation_ == cover::COVER_OPERATION_OPENING &&
+          this->target_position_ == cover::COVER_OPEN &&
           this->position != cover::COVER_OPEN) {
         this->position = cover::COVER_OPEN;
       }
