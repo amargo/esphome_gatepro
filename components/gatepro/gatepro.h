@@ -138,14 +138,10 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
       void publish_params();
       void write_params();
       std::queue<std::function<void()>> paramTaskQueue;
-      std::string devinfo = "N/A";
-
-  void update_state_from_position(float position);
   void log_state_change(GateProState old_state, GateProState new_state);
 
   // abstract (cover) logic
   void control(const cover::CoverCall &call) override;
-  void start_direction_(cover::CoverOperation dir);
 
   // device logic
   std::string convert(uint8_t*, size_t);
@@ -154,10 +150,8 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   void enqueue_tx_(const std::string &cmd, bool priority = false);
   void read_uart();
   void write_uart();
-  void debug();
   std::deque<std::string> tx_queue;
   std::queue<std::string> rx_queue;
-  bool blocker{false};
   
   // sensor logic
   void correction_after_operation();
@@ -184,8 +178,6 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   GateProState gate_state_{STATE_UNKNOWN};
   uint32_t last_state_change_{0};
   bool force_state_update_{false};
-  uint8_t consecutive_position_readings_{0};
-  float last_position_reading_{-1.0f};
   
   // Pattern detection variables
   std::string last_pattern_seen_{""};

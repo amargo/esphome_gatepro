@@ -454,65 +454,6 @@ void GatePro::control(const cover::CoverCall &call) {
   }
 }
 
-void GatePro::start_direction_(cover::CoverOperation dir) {
-  // If we're already moving in this direction, don't send duplicate commands
-  // But allow sending the same command for IDLE (stop) as it's important for safety
-  if (this->current_operation == dir && dir != cover::COVER_OPERATION_IDLE) {
-    ESP_LOGD(TAG, "Already moving in the requested direction");
-    return;
-  }
-
-  // Update the current operation before sending the command
-  // This ensures the state is updated immediately for better UI responsiveness
-  cover::CoverOperation old_operation = this->current_operation;
-  this->current_operation = dir;
-
-  // Log the operation change
-  ESP_LOGI(TAG, "Changing operation: %s -> %s", 
-           old_operation == cover::COVER_OPERATION_IDLE ? "idle" : 
-           old_operation == cover::COVER_OPERATION_OPENING ? "opening" : "closing",
-           dir == cover::COVER_OPERATION_IDLE ? "idle" : 
-           dir == cover::COVER_OPERATION_OPENING ? "opening" : "closing");
-
-  // Send the appropriate command based on the requested direction
-  switch (dir) {
-    case cover::COVER_OPERATION_IDLE:
-      // Even if operation is finished, still send STOP for safety
-      this->queue_gatepro_cmd(GATEPRO_CMD_STOP);
-      
-      // Mark the operation as finished
-      this->operation_finished = true;
-      break;
-      
-    case cover::COVER_OPERATION_OPENING:
-      this->queue_gatepro_cmd(GATEPRO_CMD_OPEN);
-      
-      // Mark the operation as in progress
-      this->operation_finished = false;
-      
-      // Update the last operation
-      this->last_operation_ = cover::COVER_OPERATION_OPENING;
-      break;
-      
-    case cover::COVER_OPERATION_CLOSING:
-      this->queue_gatepro_cmd(GATEPRO_CMD_CLOSE);
-      
-      // Mark the operation as in progress
-      this->operation_finished = false;
-      
-      // Update the last operation
-      this->last_operation_ = cover::COVER_OPERATION_CLOSING;
-      break;
-      
-    default:
-      ESP_LOGE(TAG, "Unknown operation requested: %d", dir);
-      return;
-  }
-  
-  // Publish the state immediately to update the UI
-  this->publish_state();
-}
-
 void GatePro::correction_after_operation() {
     // Only correct position when the motor confirmed a definitive end state
     // via a "Closed" or "Opened" event (gate_state_ == STATE_CLOSED/STATE_OPEN).
@@ -547,38 +488,6 @@ void GatePro::stop_at_target_position() {
     ESP_LOGI(TAG, "Target position %.2f reached (%.2f), stopping", this->target_position_, this->position);
     this->stop_at_target_ = false;
     this->make_call().set_command_stop().perform();
-  }
-}
-
-void GatePro::update_state_from_position(float position) {
-  // Only update state from position if we're not already in a definitive state
-  if (this->gate_state_ == STATE_OPENING || this->gate_state_ == STATE_CLOSING) {
-    return;
-  }
-  
-  GateProState old_state = this->gate_state_;
-  
-  // Determine state based on position
-  if (position <= 0.05f) {
-    // Position is very close to 0, consider it fully open
-    this->gate_state_ = STATE_OPEN;
-    this->position = cover::COVER_OPEN;
-    this->position_ = cover::COVER_OPEN;
-    this->operation_finished = true;
-  } else if (position >= 0.95f) {
-    // Position is very close to 1, consider it fully closed
-    this->gate_state_ = STATE_CLOSED;
-    this->position = cover::COVER_CLOSED;
-    this->position_ = cover::COVER_CLOSED;
-    this->operation_finished = true;
-  } else {
-    // In between, consider it stopped at an intermediate position
-    this->gate_state_ = STATE_STOPPED;
-  }
-  
-  // Log state change if it occurred
-  if (old_state != this->gate_state_) {
-    this->log_state_change(old_state, this->gate_state_);
   }
 }
 
@@ -857,13 +766,10 @@ void GatePro::setup() {
    this->gate_state_ = STATE_UNKNOWN;
    this->last_state_change_ = 0;
    this->force_state_update_ = true;
-   this->consecutive_position_readings_ = 0;
-   this->last_position_reading_ = -1.0f;
    this->last_pattern_seen_ = "";
    this->consecutive_pattern_readings_ = 0;
    this->msg_buff = "";
    this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
-   this->blocker = false;
    this->target_position_ = 0.0f;
 
    // Initialize parameter system
