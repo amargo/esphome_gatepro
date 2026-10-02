@@ -333,6 +333,29 @@ void GatePro::process() {
       this->publish_state();
       return;
     }
+    else if (field_equals(msg, 11, "PedOpening")) {
+      ESP_LOGI(TAG, "Gate is opening (pedestrian)");
+      this->stop_at_target_ = false;
+      this->operation_finished = false;
+      this->current_operation = cover::COVER_OPERATION_OPENING;
+      this->last_operation_ = cover::COVER_OPERATION_OPENING;
+      this->gate_state_ = STATE_OPENING;
+      this->last_state_change_ = now;
+      this->log_state_change(old_state, this->gate_state_);
+      this->publish_state();
+      return;
+    }
+    else if (field_equals(msg, 11, "PedOpened")) {
+      // Pedestrian opening ends at a partial position, not at COVER_OPEN.
+      ESP_LOGI(TAG, "Pedestrian opening finished");
+      this->operation_finished = true;
+      this->current_operation = cover::COVER_OPERATION_IDLE;
+      this->gate_state_ = STATE_STOPPED;
+      this->last_state_change_ = now;
+      this->log_state_change(old_state, this->gate_state_);
+      this->publish_state();
+      return;
+    }
     else if (field_equals(msg, 11, "Stopped")) {
       ESP_LOGI(TAG, "Gate has stopped");
       this->stop_at_target_ = false;
