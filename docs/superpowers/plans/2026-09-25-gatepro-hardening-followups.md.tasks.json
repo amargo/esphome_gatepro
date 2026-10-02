@@ -1,0 +1,94 @@
+{
+  "planPath": "docs/superpowers/plans/2026-09-25-gatepro-hardening-followups.md",
+  "tasks": [
+    {
+      "id": 0,
+      "subject": "Task 0: Put the hardening work on its own branch and commit it",
+      "status": "pending",
+      "description": "**Goal:** Move uncommitted hardening changes from chore/unify-github-workflows to fix/hardening (from main) and commit them.\n\n**Verify:** git log --oneline main..fix/hardening -> 1 commit\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro.cpp\", \"components/gatepro/gatepro.h\", \"components/gatepro/cover.py\", \"docs/hardening-review.md\"], \"verifyCommand\": \"git log --oneline main..fix/hardening\", \"acceptanceCriteria\": [\"fix/hardening from main with one commit\", \".gitignore left for owner decision\"]}\n```"
+    },
+    {
+      "id": 1,
+      "subject": "Task 1: Extract protocol helpers into gatepro_protocol.h with host tests",
+      "status": "pending",
+      "blockedBy": [
+        0
+      ],
+      "description": "**Goal:** Dependency-free protocol header covered by host unit tests compiled with -fno-exceptions.\n\n**Verify:** g++ -std=c++17 -Wall -Wextra -Werror -fno-exceptions -I components/gatepro tests/test_protocol.cpp -o build/test_protocol && ./build/test_protocol\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro_protocol.h\", \"tests/test_protocol.cpp\", \"components/gatepro/gatepro.cpp\", \"components/gatepro/gatepro.h\", \".gitignore\"], \"verifyCommand\": \"mkdir -p build && g++ -std=c++17 -Wall -Wextra -Werror -fno-exceptions -I components/gatepro tests/test_protocol.cpp -o build/test_protocol && ./build/test_protocol\", \"acceptanceCriteria\": [\"tests pass\", \"helpers removed from gatepro.cpp\", \"firmware compiles without gatepro warnings\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: CI compiles the PR's own component and runs the unit tests",
+      "status": "pending",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** CI matrix includes gatepro_boxer_local.yaml and a unit-tests job. Depends on chore/unify-github-workflows being merged first.\n\n**Verify:** gh pr checks <PR#>\n\n```json:metadata\n{\"files\": [\".github/workflows/esphome.yml\"], \"verifyCommand\": \"gh pr checks --watch\", \"acceptanceCriteria\": [\"local yaml in compile matrix\", \"unit-tests job green\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Remove dead code",
+      "status": "pending",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** Remove update_state_from_position, start_direction_, debug, blocker, consecutive_position_readings_, last_position_reading_, devinfo.\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro.h\", \"components/gatepro/gatepro.cpp\"], \"verifyCommand\": \"grep -nE \\\"update_state_from_position|start_direction_|void debug|blocker|consecutive_position_readings_|last_position_reading_|std::string devinfo\\\" components/gatepro/*\", \"acceptanceCriteria\": [\"no dead members left\", \"tests and firmware compile pass\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Real-device verification",
+      "status": "pending",
+      "blockedBy": [
+        3,
+        6,
+        7,
+        8,
+        9
+      ],
+      "description": "**Goal:** Manual verification on the gate: STOP priority, partial position, stale target, same position, toggle, parameter write. Record results in docs/hardening-review.md.\n\n```json:metadata\n{\"files\": [\"docs/hardening-review.md\"], \"verifyCommand\": \"esphome logs examples/gatepro_boxer_local.yaml\", \"acceptanceCriteria\": [\"all scenarios as expected and recorded\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Branch cleanup (needs owner confirmation)",
+      "status": "pending",
+      "description": "**Goal:** Delete merged feature/precheck-for-write-params locally and on origin after owner confirms.\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"git branch -a | grep precheck\", \"acceptanceCriteria\": [\"owner confirmed\", \"branch deleted\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Per-parameter value ranges (U1, U2)",
+      "status": "pending",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** set_param validates per-group ranges; confirm 0- vs 1-based encoding on device; align example sliders.\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro_protocol.h\", \"tests/test_protocol.cpp\", \"components/gatepro/gatepro.cpp\", \"examples/gatepro_boxer_example.yaml\", \"docs/upstream-comparison.md\"], \"verifyCommand\": \"mkdir -p build && g++ -std=c++17 -Wall -Wextra -Werror -fno-exceptions -I components/gatepro tests/test_protocol.cpp -o build/test_protocol && ./build/test_protocol\", \"acceptanceCriteria\": [\"encoding confirmed on device\", \"param_value_valid tested and used\", \"slider ranges match\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Motion detection from RS and position clamp (U3, U4)",
+      "status": "pending",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** Detect external motion from status reply; clamp moving position to 1-99%.\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro_protocol.h\", \"tests/test_protocol.cpp\", \"components/gatepro/gatepro.cpp\"], \"verifyCommand\": \"mkdir -p build && g++ -std=c++17 -Wall -Wextra -Werror -fno-exceptions -I components/gatepro tests/test_protocol.cpp -o build/test_protocol && ./build/test_protocol\", \"acceptanceCriteria\": [\"helpers tested\", \"idle cover follows RS motion\", \"no 0/100% while moving\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Pedestrian open events (U5)",
+      "status": "pending",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** Handle PedOpening/PedOpened motor events.\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro.cpp\"], \"verifyCommand\": \"esphome compile examples/gatepro_boxer_local.yaml\", \"acceptanceCriteria\": [\"PedOpening->opening\", \"PedOpened->idle partial\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 9: Publish throttling (U6)",
+      "status": "pending",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** Publish on change plus max 10 ticks.\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro.h\", \"components/gatepro/gatepro.cpp\"], \"verifyCommand\": \"esphome compile examples/gatepro_boxer_local.yaml\", \"acceptanceCriteria\": [\"<=10 publishes after last change when idle\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-10-02T00:00:00Z"
+}
