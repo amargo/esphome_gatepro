@@ -56,3 +56,16 @@ files were normalised back to LF.
 | `chore/unify-github-workflows` | +2 / −0 | CI/Renovate only; ready for a PR. Currently also carries the uncommitted hardening work. |
 | `feature/precheck-for-write-params` | +0 / −8 | Fully merged; can be deleted locally and on `origin`. |
 | `upstream/main`, `upstream/dev` (markv9401) = `rowra44/main`, `rowra44/dev` (commit-identical) | diverged since 2024-11 | Different architecture (`constants.h`, select entities). Same `stoi` / unchecked `substr` weaknesses, but it holds valuable **protocol knowledge** (per-parameter ranges, motion detection from `RS`, pedestrian events). See `docs/upstream-comparison.md`. |
+
+## 4. Code review of `fix/hardening` (2026-10-02)
+
+Static review of the whole branch: no critical issues; STOP handling, queue
+eviction, dedupe vs. RS polling and parser bounds were confirmed correct.
+
+| # | Sev. | Finding | Status |
+|---|------|---------|--------|
+| R1 | important | The motor repeats `Stopped` (~200 ms) while idle; a repeat processed right after a motion command reset the operation and cancelled a partial-position target, so the gate ran to its end stop. | fixed – repeats within 2 s of a queued OPEN/CLOSE/PED OPEN are ignored |
+| R2 | important | RS-based motion detection could fire on an in-flight status right after a stop and make the state flap; no publish at the detection site. | fixed – 1 s hold-off after any state change / user STOP; publishes on detection |
+| R3 | minor | `PedOpened` leaves the position at the last polled value (RS is ignored while idle). | open |
+| R4 | minor | `publish()` throttling rarely re-arms, because `process()` updates `position_` itself. Harmless: all state changes publish explicitly. | accepted |
+| R5 | minor | A pending parameter write waits forever if the `ACK RP` never arrives (no timeout). | open |
