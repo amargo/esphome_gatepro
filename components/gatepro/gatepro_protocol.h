@@ -106,6 +106,22 @@ inline bool parse_position(const std::string &msg, int &percentage) {
   return true;
 }
 
+static const size_t MOVING_TOKEN_OFFSET = 13;  // "ACK RS:00,80,<C4>,..."
+
+// 3rd status token "C4" means the motor is running.
+inline bool status_is_moving(const std::string &msg) {
+  return field_equals(msg, MOVING_TOKEN_OFFSET, "C4");
+}
+
+// The controller adds KNOWN_PERCENTAGE_OFFSET to the position while opening.
+inline bool status_is_opening(const std::string &msg) {
+  if (msg.size() < POSITION_OFFSET + 2) {
+    return false;
+  }
+  int raw;
+  return parse_int(msg.substr(POSITION_OFFSET, 2), 16, raw) && raw > 100;
+}
+
 }  // namespace protocol
 }  // namespace gatepro
 }  // namespace esphome

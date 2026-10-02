@@ -1,5 +1,6 @@
 #include "esphome/core/log.h"
 #include "gatepro.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -222,6 +223,21 @@ void GatePro::process() {
                this->consecutive_pattern_readings_, current_pattern.c_str());
     }
     
+    // Motion started outside ESPHome (remote control, missed $V1PKF0 event,
+    // reboot mid-travel): derive the direction from the status itself.
+    if (this->current_operation == cover::COVER_OPERATION_IDLE) {
+      const bool opening = status_is_opening(msg);
+      if (opening || status_is_moving(msg)) {
+        ESP_LOGI(TAG, "Motion detected from status: %s", opening ? "opening" : "closing");
+        GateProState old_state = this->gate_state_;
+        this->operation_finished = false;
+        this->current_operation = opening ? cover::COVER_OPERATION_OPENING : cover::COVER_OPERATION_CLOSING;
+        this->last_operation_ = this->current_operation;
+        this->gate_state_ = opening ? STATE_OPENING : STATE_CLOSING;
+        this->log_state_change(old_state, this->gate_state_);
+      }
+    }
+
     // For position updates, only process them if the gate is in motion
     // This prevents position updates when the gate is stationary
     if (!this->operation_finished || this->current_operation != cover::COVER_OPERATION_IDLE) {
@@ -232,6 +248,12 @@ void GatePro::process() {
         return;
       }
       
+      // While moving, the controller may report 0/100 % long before the end
+      // stop (e.g. after a direction change). End positions are only set by
+      // the Opened/Closed events.
+      if (this->current_operation != cover::COVER_OPERATION_IDLE) {
+        percentage = std::max(1, std::min(99, percentage));
+      }
       float new_position = (float)percentage / 100;
       
       if (this->operation_finished && this->current_operation == cover::COVER_OPERATION_IDLE) {
