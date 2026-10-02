@@ -14,6 +14,18 @@ permissions:
   contents: read
 
 jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Protocol unit tests
+        run: |
+          mkdir -p build
+          g++ -std=c++17 -Wall -Wextra -Werror -fno-exceptions -I components/gatepro tests/test_protocol.cpp -o build/test_protocol
+          ./build/test_protocol
+
   compile:
     runs-on: ubuntu-latest
     strategy:
@@ -21,6 +33,7 @@ jobs:
       matrix:
         file:
           - gatepro_boxer_example.yaml
+          - gatepro_boxer_local.yaml
         esphome-version:
           - stable
           - dev
