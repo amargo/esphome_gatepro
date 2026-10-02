@@ -64,8 +64,28 @@ eviction, dedupe vs. RS polling and parser bounds were confirmed correct.
 
 | # | Sev. | Finding | Status |
 |---|------|---------|--------|
-| R1 | important | The motor repeats `Stopped` (~200 ms) while idle; a repeat processed right after a motion command reset the operation and cancelled a partial-position target, so the gate ran to its end stop. | fixed – repeats within 2 s of a queued OPEN/CLOSE/PED OPEN are ignored |
+| R1 | important | A `Stopped` event processed right after a motion command reset the operation and cancelled a partial-position target. The device log (§5) shows this happening: the `Stopped` events are replies to earlier STOP commands, not spontaneous repeats. | fixed – `Stopped` within 2 s of a queued OPEN/CLOSE/PED OPEN is ignored when already stopped |
 | R2 | important | RS-based motion detection could fire on an in-flight status right after a stop and make the state flap; no publish at the detection site. | fixed – 1 s hold-off after any state change / user STOP; publishes on detection |
 | R3 | minor | `PedOpened` leaves the position at the last polled value (RS is ignored while idle). | open |
 | R4 | minor | `publish()` throttling rarely re-arms, because `process()` updates `position_` itself. Harmless: all state changes publish explicitly. | accepted |
 | R5 | minor | A pending parameter write waits forever if the `ACK RP` never arrives (no timeout). | open |
+
+## 5. Device log analysis (`logs/logs_driveway-gate_run.txt`)
+
+Real-device run on 2026-03-22 (ESPHome 2026.3.0, firmware built from the GitHub
+`main` of that time, i.e. **before** this hardening). Scenario: partial open to
+52 %, then close. `gatepro` logged at INFO, no raw UART debug.
+
+| # | Observation (timestamps from the log) | Meaning | Status |
+|---|----------------------------------------|---------|--------|
+| L1 | 11:03:59.96 – 11:04:10.0: `Cover STOP command received` every ~200 ms for 10 s, 24× `TX queue full, dropping oldest command`. | The old `stop_at_target_position()` never cleared its target, so it re-sent STOP on every `update()`. This confirms finding #5 and the TX-queue issue #3 in production. | fixed (`stop_at_target_` flag, STOP dedupe/priority) |
+| L2 | 33 `Stopped` events, all between the first STOP and 11:04:12.05; none after the gate moved again. | `Stopped` is the motor's **reply to each STOP**. It is not a spontaneous 200 ms repeat as the old code comment claimed. | comments corrected |
+| L3 | CLOSE at 11:04:10.56 → 5 more `Stopped` replies → op shown `IDLE` at 11:04:11.03 → `Closing` only at 11:04:12.45. | A backlogged STOP reply cancelled the new command's state (R1), so the UI showed idle for about 1.4 s while the gate started closing. | fixed (R1) |
+| L4 | Command → motor event latency: `Opening` 1.4 s (empty queue), `Closing` 1.9 s (backlogged queue). `Closed` arrived 3.5 s after the position had reached 0 %. | The 2 s stale-`Stopped` window covers a normal start. Near the end stop the motor creeps for several seconds. The 1–99 % clamp keeps the cover "closing" until `Closed`. | info |
+| L5 | Same physical spot: 48 % at the end of opening, 60 % at the start of closing. Speed is about 8 %/s opening and about 6.5 %/s closing. | The RS position is **not consistent between directions**: the opening scale or the `+128` offset assumption is off. Partial positions differ depending on direction. | **open** – needs calibration with raw RS data |
+| L6 | 640 cover state publishes in about 90 s (about 7/s, also while idle). | Confirms the publish storm. | mitigated (Task 9); `process()` still publishes on each RS while moving |
+| L7 | Parameter read at boot: speed 2, decel distance 4, decel speed 2, max current 3, auto close 5, pedestrian time 1, force detection 1. | Not enough on its own to settle the 0- vs 1-based encoding (plan Task 6). Needs the controller's own menu values for comparison. | **open** |
+| L8 | `Closed` event has `src=0001`; the movement events have `src=P00287D7`. | Motor-originated vs. command-originated events. The parser ignores `src`, so this is harmless. | info |
+
+Next device run: set `logger: logs: gatepro: DEBUG` and enable the `uart` debug
+sequence, so that raw `ACK RS` lines are captured for L5 and `ACK RP` for L7.

@@ -365,9 +365,10 @@ void GatePro::process() {
       return;
     }
     else if (field_equals(msg, 11, "Stopped")) {
-      // The motor repeats "Stopped" (~200 ms) while idle. A repeat arriving
-      // shortly after we queued a motion command predates that command; applying
-      // it would reset the operation and cancel a partial-position target.
+      // The motor answers every STOP with "Stopped". Replies to earlier STOPs
+      // can still arrive after we queued a new motion command (seen on a real
+      // device); applying them would reset the operation and cancel a
+      // partial-position target.
       if (this->gate_state_ == STATE_STOPPED &&
           this->current_operation != cover::COVER_OPERATION_IDLE &&
           now - this->last_motion_cmd_ms_ < STALE_STOPPED_GRACE_MS) {
@@ -378,8 +379,8 @@ void GatePro::process() {
       this->stop_at_target_ = false;
       this->operation_finished = true;
       this->current_operation = cover::COVER_OPERATION_IDLE;
-      // Only request status on first Stopped event to avoid RS command flooding.
-      // The motor sends Stopped repeatedly (~200ms) which would overflow the TX queue.
+      // Only request status on the first Stopped event: replies to repeated
+      // STOP commands would otherwise flood the TX queue with RS requests.
       bool was_already_stopped = (this->gate_state_ == STATE_STOPPED);
       this->gate_state_ = STATE_STOPPED;
       this->last_state_change_ = now;
