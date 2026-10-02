@@ -14,6 +14,7 @@
 #include "esphome/components/button/button.h"
 #include "esphome/components/number/number.h"
 #include "esphome/components/switch/switch.h"
+#include "gatepro_protocol.h"
 
 namespace esphome {
 namespace gatepro {
@@ -173,10 +174,7 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   static const size_t MAX_QUEUE_SIZE = 10;         // Maximum queue size to prevent memory issues
   static const size_t MAX_RX_QUEUE_SIZE = 10;      // Maximum pending RX messages
   static const size_t MAX_PARAM_TASKS = 8;         // Maximum pending parameter writes
-  static const size_t NUM_PARAMS = 17;             // GatePro has 17 parameter groups (0-16)
-  static const int MAX_PARAM_VALUE = 15;           // Upper bound for any parameter value
 
-  const int known_percentage_offset = 128;
   const float acceptable_diff = 0.05f;
   bool stop_at_target_{false};  // true only while a partial-position move is in progress
   float target_position_{0.0f};
