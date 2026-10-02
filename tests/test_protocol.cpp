@@ -93,6 +93,21 @@ static void test_parse_position() {
   CHECK(!parse_position("ACK RS:00", pct));  // too short
 }
 
+static void test_status_motion() {
+  // "ACK RS:00,80,C4,C6,..." : 3rd token C4 = moving, C6 = 198 > 100 = opening
+  const std::string opening = "ACK RS:00,80,C4,C6,3E,16,FF,FF,FF\\r\\n";
+  const std::string closing = "ACK RS:00,80,C4,32,3E,16,FF,FF,FF\\r\\n";
+  const std::string idle    = "ACK RS:00,A2,00,40,00,16,FF,FF,FF\\r\\n";
+  CHECK(status_is_opening(opening));
+  CHECK(status_is_moving(opening));
+  CHECK(!status_is_opening(closing));
+  CHECK(status_is_moving(closing));
+  CHECK(!status_is_opening(idle));
+  CHECK(!status_is_moving(idle));
+  CHECK(!status_is_moving("ACK RS:00"));   // too short: no throw
+  CHECK(!status_is_opening("ACK RS:00"));
+}
+
 int main() {
   test_starts_with();
   test_field_equals();
@@ -101,6 +116,7 @@ int main() {
   test_parse_params_ok();
   test_parse_params_rejects();
   test_parse_position();
+  test_status_motion();
   if (failures) {
     std::printf("%d check(s) failed\n", failures);
     return 1;
