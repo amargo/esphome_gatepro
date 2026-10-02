@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deque>
+#include <functional>
 #include <map>
 #include <queue>
 #include <vector>
@@ -83,11 +85,11 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
       void set_sw_infra2(switch_::Switch *sw) { sw_infra2 = sw; }
       
       // Button components
-      esphome::button::Button *btn_learn;
+      esphome::button::Button *btn_learn{nullptr};
       void set_btn_learn(esphome::button::Button *btn) { btn_learn = btn; }
-      esphome::button::Button *btn_params_od;
+      esphome::button::Button *btn_params_od{nullptr};
       void set_btn_params_od(esphome::button::Button *btn) { btn_params_od = btn; }
-      esphome::button::Button *btn_remote_learn;
+      esphome::button::Button *btn_remote_learn{nullptr};
       void set_btn_remote_learn(esphome::button::Button *btn) { btn_remote_learn = btn; }
       
       // Text sensor components
@@ -130,7 +132,7 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
  protected:
       // Parameter logic
       std::vector<int> params;
-      void parse_params(std::string msg);
+      void parse_params(const std::string &msg);
       bool param_no_pub = false;
       void publish_params();
       void write_params();
@@ -148,12 +150,13 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   std::string convert(uint8_t*, size_t);
   void process();
   void queue_gatepro_cmd(GateProCmd cmd);
+  void enqueue_tx_(const std::string &cmd, bool priority = false);
   void read_uart();
   void write_uart();
   void debug();
-  std::queue<std::string> tx_queue;
+  std::deque<std::string> tx_queue;
   std::queue<std::string> rx_queue;
-  bool blocker;
+  bool blocker{false};
   
   // sensor logic
   void correction_after_operation();
@@ -168,13 +171,17 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   static const size_t MAX_UART_BUFFER_SIZE = 512;  // Maximum buffer size to prevent memory issues
   static const size_t UART_READ_BUFFER_SIZE = 256; // Stack buffer size for reading
   static const size_t MAX_QUEUE_SIZE = 10;         // Maximum queue size to prevent memory issues
+  static const size_t MAX_RX_QUEUE_SIZE = 10;      // Maximum pending RX messages
+  static const size_t MAX_PARAM_TASKS = 8;         // Maximum pending parameter writes
+  static const size_t NUM_PARAMS = 17;             // GatePro has 17 parameter groups (0-16)
+  static const int MAX_PARAM_VALUE = 15;           // Upper bound for any parameter value
 
   const int known_percentage_offset = 128;
   const float acceptable_diff = 0.05f;
-  float target_position_;
-  float position_;
-  bool operation_finished;
-  cover::CoverCall* last_call_;
+  bool stop_at_target_{false};  // true only while a partial-position move is in progress
+  float target_position_{0.0f};
+  float position_{0.0f};
+  bool operation_finished{true};
 
   GateProState gate_state_{STATE_UNKNOWN};
   uint32_t last_state_change_{0};

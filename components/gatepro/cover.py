@@ -1,9 +1,13 @@
+import re
+
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import uart, sensor, cover, button, number, text_sensor, switch
-from esphome.const import CONF_ID, ICON_EMPTY, UNIT_EMPTY
+from esphome.components import uart, cover, button, number, text_sensor, switch
+from esphome.const import CONF_ID
 
 DEPENDENCIES = ["uart", "cover", "button"]
+# gatepro.h includes these headers unconditionally
+AUTO_LOAD = ["sensor", "text_sensor", "number", "switch"]
 
 gatepro_ns = cg.esphome_ns.namespace("gatepro")
 GatePro = gatepro_ns.class_(
@@ -41,15 +45,22 @@ CONF_PERMALOCK = "sw_permalock"             # group 15 - Permanent lock
 CONF_INFRA1 = "sw_infra1"                   # group 13 - Infrared sensor 1
 CONF_INFRA2 = "sw_infra2"                   # group 14 - Infrared sensor 2
 
-cover.COVER_OPERATIONS.update({
-    "READ_STATUS": cover.CoverOperation.COVER_OPERATION_READ_STATUS,
-})
-validate_cover_operation = cv.enum(cover.COVER_OPERATIONS, upper=True)
+
+
+def validate_source(value):
+    """The source is embedded in serial commands, so keep it to a safe charset."""
+    value = cv.string_strict(value)
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", value):
+        raise cv.Invalid(
+            "source must be 1-32 characters of A-Z, a-z, 0-9, '_' or '-'"
+        )
+    return value
+
 
 CONFIG_SCHEMA = cover.cover_schema(GatePro).extend(
     {
         cv.GenerateID(): cv.declare_id(GatePro),
-        cv.Optional(CONF_SOURCE, default="P00287D7"): cv.string,
+        cv.Optional(CONF_SOURCE, default="P00287D7"): validate_source,
         
         # Basic operation button components
         cv.Optional(CONF_OPEN_BTN): cv.use_id(button.Button),                # Manual open button
@@ -78,7 +89,11 @@ CONFIG_SCHEMA = cover.cover_schema(GatePro).extend(
         cv.Optional(CONF_PERMALOCK): cv.use_id(switch.Switch),               # group 15 - Permanent lock
         cv.Optional(CONF_INFRA1): cv.use_id(switch.Switch),                  # group 13 - Infrared sensor 1
         cv.Optional(CONF_INFRA2): cv.use_id(switch.Switch),                  # group 14 - Infrared sensor 2
-    }).extend(cv.COMPONENT_SCHEMA).extend(cv.polling_component_schema("60s")).extend(uart.UART_DEVICE_SCHEMA)
+    }).extend(cv.polling_component_schema("60s")).extend(uart.UART_DEVICE_SCHEMA)
+
+FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
+    "gatepro", baud_rate=9600, require_tx=True, require_rx=True
+)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
