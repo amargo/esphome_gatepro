@@ -12,46 +12,7 @@ namespace gatepro {
 ////////////////////////////////////
 static const char* TAG = "gatepro";
 
-// Messages are stored with control characters escaped (see convert()),
-// so the line terminator is the literal 4-char sequence "\\r\\n".
-static const char *const RX_TERMINATOR = "\\r\\n";
-
-static bool starts_with(const std::string &s, const char *prefix) {
-   return s.compare(0, strlen(prefix), prefix) == 0;
-}
-
-// Bounds-checked field comparison: never throws, unlike substr().
-static bool field_equals(const std::string &s, size_t pos, const char *value) {
-   const size_t len = strlen(value);
-   return s.size() >= pos + len && s.compare(pos, len, value) == 0;
-}
-
-// Returns the part of the message after `pos`, without the trailing terminator.
-static std::string payload_after(const std::string &s, size_t pos) {
-   if (pos >= s.size()) {
-      return "";
-   }
-   size_t end = s.size();
-   const size_t term_len = strlen(RX_TERMINATOR);
-   if (end - pos >= term_len && s.compare(end - term_len, term_len, RX_TERMINATOR) == 0) {
-      end -= term_len;
-   }
-   return s.substr(pos, end - pos);
-}
-
-// Strict integer parser (no exceptions, rejects empty/garbage input).
-static bool parse_int(const std::string &s, int base, int &out) {
-   if (s.empty()) {
-      return false;
-   }
-   char *end = nullptr;
-   long val = strtol(s.c_str(), &end, base);
-   if (end == s.c_str() || *end != '\0') {
-      return false;
-   }
-   out = (int) val;
-   return true;
-}
+using namespace protocol;
 
 ////////////////////////////////////////////
 // Helper / misc functions
@@ -264,19 +225,10 @@ void GatePro::process() {
     // For position updates, only process them if the gate is in motion
     // This prevents position updates when the gate is stationary
     if (!this->operation_finished || this->current_operation != cover::COVER_OPERATION_IDLE) {
-      // Extract the position value (hex)
+      // Extract the position value (hex, 0-100 after offset correction)
       int percentage;
-      if (!parse_int(msg.substr(16, 2), 16, percentage)) {
-        ESP_LOGE(TAG, "Failed to parse position from ACK RS message: %s", msg.c_str());
-        return;
-      }
-
-      // percentage correction with known offset, if necessary
-      if (percentage > 100) {
-        percentage -= this->known_percentage_offset;
-      }
-      if (percentage < 0 || percentage > 100) {
-        ESP_LOGW(TAG, "Ignoring out-of-range position %d in: %s", percentage, msg.c_str());
+      if (!parse_position(msg, percentage)) {
+        ESP_LOGW(TAG, "Ignoring invalid position in ACK RS message: %s", msg.c_str());
         return;
       }
       
@@ -831,28 +783,8 @@ void GatePro::publish_params() {
 void GatePro::parse_params(const std::string &msg) {
    // example: ACK RP,1:1,0,0,1,2,2,0,0,0,3,0,0,3,0,0,0,0\r\n
    //                   ^-9
-   const std::string payload = payload_after(msg, 9);
    std::vector<int> parsed;
-   bool valid = !payload.empty();
-   size_t start = 0;
-
-   // split on ',' and validate every field (no exceptions on ESP targets)
-   while (valid) {
-      size_t end = payload.find(',', start);
-      std::string field = end == std::string::npos ? payload.substr(start) : payload.substr(start, end - start);
-      int value;
-      if (!parse_int(field, 10, value) || value < 0 || value > MAX_PARAM_VALUE || parsed.size() >= NUM_PARAMS) {
-         valid = false;
-         break;
-      }
-      parsed.push_back(value);
-      if (end == std::string::npos) {
-         break;
-      }
-      start = end + 1;
-   }
-
-   if (!valid || parsed.size() != NUM_PARAMS) {
+   if (!protocol::parse_params(msg, parsed)) {
       ESP_LOGE(TAG, "Invalid parameter response, ignoring: %s", msg.c_str());
       if (!this->paramTaskQueue.empty()) {
          ESP_LOGW(TAG, "Discarding %zu pending parameter write(s)", this->paramTaskQueue.size());
