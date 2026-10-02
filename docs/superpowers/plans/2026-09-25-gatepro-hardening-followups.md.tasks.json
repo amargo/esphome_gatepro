@@ -4,13 +4,13 @@
     {
       "id": 0,
       "subject": "Task 0: Put the hardening work on its own branch and commit it",
-      "status": "pending",
+      "status": "completed",
       "description": "**Goal:** Move uncommitted hardening changes from chore/unify-github-workflows to fix/hardening (from main) and commit them.\n\n**Verify:** git log --oneline main..fix/hardening -> 1 commit\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro.cpp\", \"components/gatepro/gatepro.h\", \"components/gatepro/cover.py\", \"docs/hardening-review.md\"], \"verifyCommand\": \"git log --oneline main..fix/hardening\", \"acceptanceCriteria\": [\"fix/hardening from main with one commit\", \".gitignore left for owner decision\"]}\n```"
     },
     {
       "id": 1,
       "subject": "Task 1: Extract protocol helpers into gatepro_protocol.h with host tests",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         0
       ],
@@ -19,7 +19,7 @@
     {
       "id": 2,
       "subject": "Task 2: CI compiles the PR's own component and runs the unit tests",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
@@ -28,7 +28,7 @@
     {
       "id": 3,
       "subject": "Task 3: Remove dead code",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
@@ -65,7 +65,7 @@
     {
       "id": 7,
       "subject": "Task 7: Motion detection from RS and position clamp (U3, U4)",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
@@ -74,7 +74,7 @@
     {
       "id": 8,
       "subject": "Task 8: Pedestrian open events (U5)",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
@@ -83,12 +83,12 @@
     {
       "id": 9,
       "subject": "Task 9: Publish throttling (U6)",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
       "description": "**Goal:** Publish on change plus max 10 ticks.\n\n```json:metadata\n{\"files\": [\"components/gatepro/gatepro.h\", \"components/gatepro/gatepro.cpp\"], \"verifyCommand\": \"esphome compile examples/gatepro_boxer_local.yaml\", \"acceptanceCriteria\": [\"<=10 publishes after last change when idle\"]}\n```"
     }
   ],
-  "lastUpdated": "2026-10-02T00:00:00Z"
+  "lastUpdated": "2026-10-02T21:00:00Z"
 }
