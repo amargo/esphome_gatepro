@@ -101,12 +101,14 @@ void GatePro::enqueue_tx_(const std::string &cmd, bool priority) {
 }
 
 void GatePro::publish() {
-    // publish on each tick
-    /*if (this->position_ == this->position) {
+    if (this->position_ != this->position) {
+      this->position_ = this->position;
+      this->publish_ticks_left_ = PUBLISH_AFTER_TICKS;
+    } else if (this->publish_ticks_left_ == 0) {
       return;
-    }*/
-
-    this->position_ = this->position;
+    } else {
+      this->publish_ticks_left_--;
+    }
     this->publish_state();
 }
 

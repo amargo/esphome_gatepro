@@ -157,6 +157,8 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   void correction_after_operation();
   cover::CoverOperation last_operation_{cover::COVER_OPERATION_OPENING};
   void publish();
+  static const uint8_t PUBLISH_AFTER_TICKS = 10;  // extra publishes after a change
+  uint8_t publish_ticks_left_{PUBLISH_AFTER_TICKS};
   void stop_at_target_position();
 
   // UART parser constants
