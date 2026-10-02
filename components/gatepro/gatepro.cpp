@@ -48,6 +48,9 @@ void GatePro::queue_gatepro_cmd(GateProCmd cmd) {
    if (cmd_str.empty()) {
       return;
    }
+   if (cmd == GATEPRO_CMD_OPEN || cmd == GATEPRO_CMD_CLOSE || cmd == GATEPRO_CMD_PED_OPEN) {
+      this->last_motion_cmd_ms_ = millis();
+   }
    // STOP is safety relevant: it must never wait behind other commands
    this->enqueue_tx_(cmd_str, cmd == GATEPRO_CMD_STOP);
 }
@@ -225,9 +228,11 @@ void GatePro::process() {
                this->consecutive_pattern_readings_, current_pattern.c_str());
     }
     
-    // Motion started outside ESPHome (remote control, missed $V1PKF0 event,
-    // reboot mid-travel): derive the direction from the status itself.
-    if (this->current_operation == cover::COVER_OPERATION_IDLE) {
+    // Motion started outside ESPHome (missed $V1PKF0 event, reboot mid-travel):
+    // derive the direction from the status itself. Skipped right after a state
+    // change (e.g. a stop), when an in-flight RS may still show the old motion.
+    if (this->current_operation == cover::COVER_OPERATION_IDLE &&
+        millis() - this->last_state_change_ >= MOTION_DETECT_HOLDOFF_MS) {
       const bool opening = status_is_opening(msg);
       if (opening || status_is_moving(msg)) {
         ESP_LOGI(TAG, "Motion detected from status: %s", opening ? "opening" : "closing");
@@ -237,6 +242,7 @@ void GatePro::process() {
         this->last_operation_ = this->current_operation;
         this->gate_state_ = opening ? STATE_OPENING : STATE_CLOSING;
         this->log_state_change(old_state, this->gate_state_);
+        this->publish_state();
       }
     }
 
@@ -359,6 +365,15 @@ void GatePro::process() {
       return;
     }
     else if (field_equals(msg, 11, "Stopped")) {
+      // The motor repeats "Stopped" (~200 ms) while idle. A repeat arriving
+      // shortly after we queued a motion command predates that command; applying
+      // it would reset the operation and cancel a partial-position target.
+      if (this->gate_state_ == STATE_STOPPED &&
+          this->current_operation != cover::COVER_OPERATION_IDLE &&
+          now - this->last_motion_cmd_ms_ < STALE_STOPPED_GRACE_MS) {
+        ESP_LOGD(TAG, "Ignoring stale Stopped event after motion command");
+        return;
+      }
       ESP_LOGI(TAG, "Gate has stopped");
       this->stop_at_target_ = false;
       this->operation_finished = true;
@@ -412,6 +427,7 @@ void GatePro::control(const cover::CoverCall &call) {
   if (call.get_stop()) {
     ESP_LOGI(TAG, "Cover STOP command received");
     this->stop_at_target_ = false;
+    this->last_state_change_ = millis();  // hold off RS motion detection
     this->queue_gatepro_cmd(GATEPRO_CMD_STOP);
     this->current_operation = cover::COVER_OPERATION_IDLE;
     this->operation_finished = true;
