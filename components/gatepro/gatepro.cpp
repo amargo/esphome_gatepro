@@ -749,8 +749,8 @@ void GatePro::set_param(int idx, int val) {
       ESP_LOGE(TAG, "Invalid parameter index: %d (valid range: 0-%d)", idx, (int) NUM_PARAMS - 1);
       return;
    }
-   if (val < 0 || val > MAX_PARAM_VALUE) {
-      ESP_LOGE(TAG, "Invalid value %d for parameter %d (valid range: 0-%d)", val, idx, MAX_PARAM_VALUE);
+   if (!param_value_valid(idx, val)) {
+      ESP_LOGE(TAG, "Invalid value %d for parameter %d (valid range: 0-%d)", val, idx, PARAM_MAX_VALUES[idx]);
       return;
    }
    if (this->paramTaskQueue.size() >= MAX_PARAM_TASKS) {
@@ -934,7 +934,7 @@ void GatePro::setup() {
          if (this->params.size() > 3 && this->params[3] == int_value) {
             return;
          }
-         // Group 4: 0-3 (1=default, 1=50%, 2=70%, 3=85%, 4=100%)
+         // Menu "4": 0=50%, 1=70%, 2=85%, 3=100%
          this->set_param(3, int_value);
       });
    }
@@ -945,7 +945,7 @@ void GatePro::setup() {
          if (this->params.size() > 4 && this->params[4] == int_value) {
             return;
          }
-         // Group 5: 0-4 (1=default, 1=75%, 2=80%, 3=85%, 4=90%, 5=95%)
+         // Menu "5": deceleration from 0=75%, 1=80%, 2=85%, 3=90%, 4=95% of travel
          this->set_param(4, int_value);
       });
    }
@@ -956,7 +956,7 @@ void GatePro::setup() {
          if (this->params.size() > 5 && this->params[5] == int_value) {
             return;
          }
-         // Group 6: 0-3 (1=default, 1=80%, 2=60%, 3=40%, 4=25%)
+         // Menu "6": 0=80%, 1=60%, 2=40%, 3=25%
          this->set_param(5, int_value);
       });
    }
@@ -967,7 +967,7 @@ void GatePro::setup() {
          if (this->params.size() > 6 && this->params[6] == int_value) {
             return;
          }
-         // Group 7: 0-9 (1=default, 1=2A, 2=3A, 3=4A, 4=5A, 5=6A, 6=7A, 7=8A, 8=9A, 9=10A, A=11A, C=12A, E=13A)
+         // Menu "7": 0=2A ... 8=10A (11-13A are BOXER 800 only)
          this->set_param(6, int_value);
       });
    }
@@ -978,7 +978,7 @@ void GatePro::setup() {
          if (this->params.size() > 1 && this->params[1] == int_value) {
             return;
          }
-         // Group 2: 0-8 (0=disabled, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s, 8=180s)
+         // Menu "2": 0=off, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s, 8=180s
          this->set_param(1, int_value);
       });
    }
@@ -989,7 +989,7 @@ void GatePro::setup() {
          if (this->params.size() > 15 && this->params[15] == (state ? 1 : 0)) {
             return;
          }
-         // Group L: L-0: disabled, L-1: enabled
+         // Menu "L": stop terminal (NC contact), 0=off, 1=on
          this->set_param(15, state ? 1 : 0);
       });
    }
@@ -1000,7 +1000,7 @@ void GatePro::setup() {
         if (this->params.size() > 13 && this->params[13] == (state ? 1 : 0)) {
           return;
         }
-        // Group H: H-0: disabled, H-1: enabled
+        // Menu "H": photocell 1, 0=off, 1=on
         this->set_param(13, state ? 1 : 0);
     });
    }
@@ -1011,7 +1011,7 @@ void GatePro::setup() {
       if (this->params.size() > 14 && this->params[14] == (state ? 1 : 0)) {
         return;
       }
-      // Group J: J-0: disabled, J-1: enabled
+      // Menu "J": photocell 2, 0=off, 1=on
       this->set_param(14, state ? 1 : 0);
     });
    }
@@ -1023,7 +1023,7 @@ void GatePro::setup() {
         if (this->params.size() > 7 && this->params[7] == int_value) {
             return;
         }
-        // Group 8: 1-6 (1=3s, 2=6s, 3=9s, 4=12s, 5=15s, 6=18s)
+        // Menu "8": pedestrian opening 0=3s, 1=6s, 2=9s, 3=12s, 4=15s, 5=18s
         this->set_param(7, int_value);
       });
   }
@@ -1035,7 +1035,7 @@ void GatePro::setup() {
         if (this->params.size() > 9 && this->params[9] == int_value) {
             return;
         }
-       // Group A: 0-3 (0=disabled, 1=Stop + reverse 1mp, 2=Stop + reverse 3mp, 3=Stop + reverse to end)
+       // Menu "A": 0=stop, 1=stop+reverse 1s, 2=stop+reverse 3s, 3=stop+reverse to end
        this->set_param(9, int_value);
     });
   }  

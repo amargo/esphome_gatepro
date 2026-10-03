@@ -125,6 +125,21 @@ static void test_status_idle_kinds() {
   CHECK(!status_is_at_end("ACK RS:00"));  // too short: no throw
 }
 
+// Ranges from the BOXER 500 manual (0-based option index).
+static void test_param_value_valid() {
+  CHECK(param_value_valid(0, 1));
+  CHECK(!param_value_valid(0, 2));           // direction: left/right only
+  CHECK(param_value_valid(1, 8));            // auto close 180 s
+  CHECK(!param_value_valid(1, 9));
+  CHECK(param_value_valid(3, 0));            // speed "4-1" = 50 %
+  CHECK(param_value_valid(3, 3));            // speed "4-4" = 100 %
+  CHECK(!param_value_valid(3, 4));
+  CHECK(param_value_valid(6, 8));            // "7-9" = 10 A
+  CHECK(!param_value_valid(6, 9));           // "7-A" = 11 A, BOXER 800 only
+  CHECK(!param_value_valid(5, -1));
+  CHECK(!param_value_valid(NUM_PARAMS, 0));  // index out of range
+}
+
 int main() {
   test_starts_with();
   test_field_equals();
@@ -135,6 +150,7 @@ int main() {
   test_parse_position();
   test_status_motion();
   test_status_idle_kinds();
+  test_param_value_valid();
   if (failures) {
     std::printf("%d check(s) failed\n", failures);
     return 1;
