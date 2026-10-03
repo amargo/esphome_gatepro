@@ -66,7 +66,7 @@ eviction, dedupe vs. RS polling and parser bounds were confirmed correct.
 |---|------|---------|--------|
 | R1 | important | A `Stopped` event processed right after a motion command reset the operation and cancelled a partial-position target. The device log (§5) shows this happening: the `Stopped` events are replies to earlier STOP commands, not spontaneous repeats. | fixed – `Stopped` within 2 s of a queued OPEN/CLOSE/PED OPEN is ignored when already stopped |
 | R2 | important | RS-based motion detection could fire on an in-flight status right after a stop and make the state flap; no publish at the detection site. | fixed – 1 s hold-off after any state change / user STOP; publishes on detection |
-| R3 | minor | `PedOpened` leaves the position at the last polled value (RS is ignored while idle). | open |
+| R3 | minor | After `Stopped`/`PedOpened` the position stayed at the last in-motion reading; the gate coasts further (device test: shown 52 %, actual 54 %). | fixed – the first `E6` status after a stop sets the position |
 | R4 | minor | `publish()` throttling rarely re-arms, because `process()` updates `position_` itself. Harmless: all state changes publish explicitly. | accepted |
 | R5 | minor | A pending parameter write waits forever if the `ACK RP` never arrives (no timeout). | open |
 
