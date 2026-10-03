@@ -82,10 +82,25 @@ Real-device run on 2026-03-22 (ESPHome 2026.3.0, firmware built from the GitHub
 | L2 | 33 `Stopped` events, all between the first STOP and 11:04:12.05; none after the gate moved again. | `Stopped` is the motor's **reply to each STOP**. It is not a spontaneous 200 ms repeat as the old code comment claimed. | comments corrected |
 | L3 | CLOSE at 11:04:10.56 → 5 more `Stopped` replies → op shown `IDLE` at 11:04:11.03 → `Closing` only at 11:04:12.45. | A backlogged STOP reply cancelled the new command's state (R1), so the UI showed idle for about 1.4 s while the gate started closing. | fixed (R1) |
 | L4 | Command → motor event latency: `Opening` 1.4 s (empty queue), `Closing` 1.9 s (backlogged queue). `Closed` arrived 3.5 s after the position had reached 0 %. | The 2 s stale-`Stopped` window covers a normal start. Near the end stop the motor creeps for several seconds. The 1–99 % clamp keeps the cover "closing" until `Closed`. | info |
-| L5 | Same physical spot: 48 % at the end of opening, 60 % at the start of closing. Speed is about 8 %/s opening and about 6.5 %/s closing. | The RS position is **not consistent between directions**: the opening scale or the `+128` offset assumption is off. Partial positions differ depending on direction. | **open** – needs calibration with raw RS data |
+| L5 | Same physical spot: 48 % at the end of opening, 60 % at the start of closing. Speed is about 8 %/s opening and about 6.5 %/s closing. | The RS position is **not consistent between directions**: the opening scale or the `+128` offset assumption is off. Partial positions differ depending on direction. | resolved – the 2026-10-03 raw capture shows a consistent scale (stop at 52 %, close starts at 52 %); the mismatch came from the old code |
 | L6 | 640 cover state publishes in about 90 s (about 7/s, also while idle). | Confirms the publish storm. | mitigated (Task 9); `process()` still publishes on each RS while moving |
 | L7 | Parameter read at boot: speed 2, decel distance 4, decel speed 2, max current 3, auto close 5, pedestrian time 1, force detection 1. | Not enough on its own to settle the 0- vs 1-based encoding (plan Task 6). Needs the controller's own menu values for comparison. | **open** |
 | L8 | `Closed` event has `src=0001`; the movement events have `src=P00287D7`. | Motor-originated vs. command-originated events. The parser ignores `src`, so this is harmless. | info |
 
 Next device run: set `logger: logs: gatepro: DEBUG` and enable the `uart` debug
 sequence, so that raw `ACK RS` lines are captured for L5 and `ACK RP` for L7.
+
+## 6. Device test 2026-10-03 (hardened firmware)
+
+Open → stop after ~6 s → close via Home Assistant, raw UART captured
+(`logs/gate-events_2026-10-03_open-stop-close.txt`).
+
+- STOP: exactly one `STOP`, one `Stopped`, one `RS`; no queue overflow (cf. L1).
+- Coalesced reads (`ACK STOP` + `Stopped`, `ACK RS` + `Closed`) are split correctly.
+- Status layout `ACK RS:00,80,<state>,<pos>,<t5>,<t6>,FF,FF,FF`: state `C4` moving,
+  `A2` idle at an end stop, `E6` stopped midway; `<pos>` hex, +0x80 while opening.
+- **Bug found:** the closed/open pattern was read at offset 10 instead of 13, so it
+  never matched; after boot the cover stayed `UNKNOWN`, showed *open* while closed, and
+  polled RS every tick. Fixed by classifying the status from the state token and the
+  position (`status_is_at_end`, `status_is_stopped_midway`), which also restores a
+  midway position after boot.
