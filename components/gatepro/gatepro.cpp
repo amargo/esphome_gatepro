@@ -149,6 +149,16 @@ void GatePro::process() {
     } else if (msg.length() >= 24) {
       current_pattern = msg.substr(13, 11);
     }
+
+    // First status after a stop: the gate coasts a little after the last
+    // in-motion reading, so take the position where it actually came to rest.
+    if (this->adopt_stop_position_ && current_pattern == "stopped") {
+      this->adopt_stop_position_ = false;
+      ESP_LOGD(TAG, "Position after stop: %d%%", status_pct);
+      this->position = (float) status_pct / 100;
+      this->position_ = this->position;
+      this->publish_state();
+    }
     
     // Main logic: Only update states when the gate is in motion or when the state is unknown
     // This prevents state jumping when the gate is stationary
@@ -391,6 +401,8 @@ void GatePro::process() {
       this->gate_state_ = STATE_STOPPED;
       this->last_state_change_ = now;
       this->log_state_change(old_state, this->gate_state_);
+      this->adopt_stop_position_ = true;
+      this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
       this->publish_state();
       return;
     }
@@ -416,6 +428,7 @@ void GatePro::process() {
       this->last_state_change_ = now;
       this->log_state_change(old_state, this->gate_state_);
       if (!was_already_stopped) {
+        this->adopt_stop_position_ = true;
         this->queue_gatepro_cmd(GATEPRO_CMD_READ_STATUS);
       }
       this->publish_state();

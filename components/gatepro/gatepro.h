@@ -180,6 +180,7 @@ class GatePro : public cover::Cover, public PollingComponent, public uart::UARTD
   GateProState gate_state_{STATE_UNKNOWN};
   uint32_t last_state_change_{0};
   uint32_t last_motion_cmd_ms_{0};                       // when OPEN/CLOSE/PED OPEN was last queued
+  bool adopt_stop_position_{false};                      // take the position from the next "stopped midway" status
   static const uint32_t STALE_STOPPED_GRACE_MS = 2000;   // ignore repeated "Stopped" this long after a motion command
   static const uint32_t MOTION_DETECT_HOLDOFF_MS = 1000; // no RS-based motion detection this soon after a state change
   bool force_state_update_{false};
