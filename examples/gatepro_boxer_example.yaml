@@ -154,47 +154,48 @@ sensor:
 # Parameter control sliders
 number:
   
-    # Group 4: 0-3 (1=default, 1=50%, 2=70%, 3=85%, 4=100%)
+    # Menu "4" (raw = option index): 0=50%, 1=70%, 2=85%, 3=100%
   - platform: template
     name: "Operation Speed"
     id: speed_slider
-    min_value: 1
-    max_value: 4
+    min_value: 0
+    max_value: 3
     step: 1
     optimistic: true
     entity_category: "config"
     
-    # Group 5: 0-4 (1=default, 1=75%, 2=80%, 3=85%, 4=90%, 5=95%)
+    # Menu "5": deceleration from 0=75%, 1=80%, 2=85%, 3=90%, 4=95% of travel
   - platform: template
     name: "Deceleration Distance"
     id: decel_dist_slider
-    min_value: 1
-    max_value: 5
-    step: 1
-    optimistic: true
-    entity_category: "config"
-    
-    # Group 6: 0-3 (1=default, 1=80%, 2=60%, 3=40%, 4=25%)
-  - platform: template
-    name: "Deceleration Speed"
-    id: decel_speed_slider
-    min_value: 1
+    min_value: 0
     max_value: 4
     step: 1
     optimistic: true
     entity_category: "config"
     
-    # Group 7: 1-9 (1=default, 1=2A, 2=3A, 3=4A, 4=5A, 5=6A, 6=7A, 7=8A, 8=9A, 9=10A, A=11A, C=12A, E=13A)
+    # Menu "6": 0=80%, 1=60%, 2=40%, 3=25%
   - platform: template
-    name: "Maximum Current (Torque)"
-    id: max_amp_slider
-    min_value: 1
-    max_value: 9
+    name: "Deceleration Speed"
+    id: decel_speed_slider
+    min_value: 0
+    max_value: 3
     step: 1
     optimistic: true
     entity_category: "config"
     
-    # Group 2: 0-8 (0=disabled, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s, 8=180s)
+    # Menu "7": 0=2A, 1=3A, 2=4A, 3=5A, 4=6A, 5=7A, 6=8A, 7=9A, 8=10A (11-13A: BOXER 800 only)
+  - platform: template
+    name: "Maximum Current (Torque)"
+    id: max_amp_slider
+    min_value: 0
+    max_value: 8
+    step: 1
+    optimistic: true
+    entity_category: "config"
+    
+    # Menu "2": 0=off, 1=5s, 2=15s, 3=30s, 4=45s, 5=60s, 6=80s, 7=120s, 8=180s
+    # Manual: enable auto close only with photocells (2 pairs recommended)
   - platform: template
     name: "Auto Close Timer"
     id: auto_close_slider
@@ -204,17 +205,17 @@ number:
     optimistic: true
     entity_category: "config"
     
-    # Group 8: 1-6 (1=3s, 2=6s, 3=9s, 4=12s, 5=15s, 6=18s)
+    # Menu "8": pedestrian opening 0=3s, 1=6s, 2=9s, 3=12s, 4=15s, 5=18s
   - platform: template
     name: "Small Gate Timer"
     id: small_gate_timer
-    min_value: 1
-    max_value: 6
+    min_value: 0
+    max_value: 5
     step: 1
     optimistic: true
     entity_category: "config"
 
-    # Group A: 0-3 (0=disabled, 1=Stop + reverse 1mp, 2=Stop + reverse 3mp, 3=Stop + reverse to end)
+    # Menu "A": 0=stop, 1=stop+reverse 1s, 2=stop+reverse 3s, 3=stop+reverse to end
   - platform: template
     name: "Force Detection Mode"
     id: force_detection_number
@@ -228,11 +229,12 @@ number:
 # Switch value ranges and descriptions:
 # Group 13 (sw_infra1): 0-1 (0=disabled, 1=enabled) - Infrared sensor 1
 # Group 14 (sw_infra2): 0-1 (0=disabled, 1=enabled) - Infrared sensor 2
-# Group 15 (sw_permalock): 0-1 (0=disabled, 1=enabled) - Permanent lock
+# Group 15 (sw_permalock): menu "L" stop terminal (NC). Enabled without a wired
+#   NC stop contact the gate will neither open nor close.
 switch:
-    # Group 15: L-0: disabled, L-1: enabled
+    # Menu "L": stop terminal, 0=off, 1=on
   - platform: template
-    name: "Permanent Lock"
+    name: "Stop Terminal"
     id: permalock_switch
     optimistic: true
     entity_category: "config"

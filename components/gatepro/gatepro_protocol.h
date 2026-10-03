@@ -22,6 +22,36 @@ static const int KNOWN_PERCENTAGE_OFFSET = 128;  // Added by the controller to s
 static const size_t PARAMS_OFFSET = 9;           // strlen("ACK RP,1:")
 static const size_t POSITION_OFFSET = 16;        // "ACK RS:00,80,C4,<C6>,..."
 
+// Parameter values are the 0-based index of the controller's menu option
+// (BOXER 500 manual v290124, "Programozható funkciók táblázata"): menu "4-1"
+// (first speed option) is sent as 0, while groups whose menu starts at 0
+// ("2-0", "9-0", "A-0", "E-0", "F-0", "H-0", "J-0", "L-0") map 1:1.
+// Confirmed on a device: raw [6]=4 is the factory "7-5" (6 A), raw [7]=1 the
+// factory "8-2" (6 s). Highest valid value per index:
+static const int PARAM_MAX_VALUES[NUM_PARAMS] = {
+    1,  // 0  "1" opening direction: left, right
+    8,  // 1  "2" auto close: off, 5, 15, 30, 45, 60, 80, 120, 180 s
+    2,  // 2  "3" safety device mode (installer only)
+    3,  // 3  "4" speed: 50, 70, 85, 100 %
+    4,  // 4  "5" deceleration starts at 75, 80, 85, 90, 95 % of travel
+    3,  // 5  "6" deceleration speed: 80, 60, 40, 25 %
+    8,  // 6  "7" force: 2..10 A (11-13 A are BOXER 800 only and rejected)
+    5,  // 7  "8" pedestrian opening: 3, 6, 9, 12, 15, 18 s
+    1,  // 8  "9" warning light: on movement, 3 s before
+    3,  // 9  "A" obstacle reaction: stop, reverse 1 s, reverse 3 s, reverse fully
+    3,  // 10 "C" remote button for full open: A-D
+    4,  // 11 "E" remote button for pedestrian open: off, A-D
+    4,  // 12 "F" remote button for external output: off, A-D
+    1,  // 13 "H" photocell 1
+    1,  // 14 "J" photocell 2
+    1,  // 15 "L" stop terminal (NC contact; blocks the gate when enabled unwired)
+    1,  // 16 "P" button logic: open/stop/close/stop, open/stop/close
+};
+
+inline bool param_value_valid(size_t idx, int value) {
+  return idx < NUM_PARAMS && value >= 0 && value <= PARAM_MAX_VALUES[idx];
+}
+
 inline bool starts_with(const std::string &s, const char *prefix) {
   return s.compare(0, strlen(prefix), prefix) == 0;
 }
