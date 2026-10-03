@@ -113,6 +113,16 @@ inline bool status_is_moving(const std::string &msg) {
   return field_equals(msg, MOVING_TOKEN_OFFSET, "C4");
 }
 
+// 3rd status token "A2": motor idle at an end stop ("ACK RS:00,80,A2,00,40,00,...").
+inline bool status_is_at_end(const std::string &msg) {
+  return field_equals(msg, MOVING_TOKEN_OFFSET, "A2");
+}
+
+// 3rd status token "E6": motor stopped midway ("ACK RS:00,80,E6,34,00,01,..." = 52 %).
+inline bool status_is_stopped_midway(const std::string &msg) {
+  return field_equals(msg, MOVING_TOKEN_OFFSET, "E6");
+}
+
 // The controller adds KNOWN_PERCENTAGE_OFFSET to the position while opening.
 inline bool status_is_opening(const std::string &msg) {
   if (msg.size() < POSITION_OFFSET + 2) {

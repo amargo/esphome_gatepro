@@ -97,7 +97,7 @@ static void test_status_motion() {
   // "ACK RS:00,80,C4,C6,..." : 3rd token C4 = moving, C6 = 198 > 100 = opening
   const std::string opening = "ACK RS:00,80,C4,C6,3E,16,FF,FF,FF\\r\\n";
   const std::string closing = "ACK RS:00,80,C4,32,3E,16,FF,FF,FF\\r\\n";
-  const std::string idle    = "ACK RS:00,A2,00,40,00,16,FF,FF,FF\\r\\n";
+  const std::string idle    = "ACK RS:00,80,A2,00,40,00,FF,FF,FF\\r\\n";  // real device, closed
   CHECK(status_is_opening(opening));
   CHECK(status_is_moving(opening));
   CHECK(!status_is_opening(closing));
@@ -106,6 +106,23 @@ static void test_status_motion() {
   CHECK(!status_is_moving(idle));
   CHECK(!status_is_moving("ACK RS:00"));   // too short: no throw
   CHECK(!status_is_opening("ACK RS:00"));
+}
+
+// Status lines captured from a real P500BU controller on 2026-10-03.
+static void test_status_idle_kinds() {
+  const std::string closed  = "ACK RS:00,80,A2,00,40,00,FF,FF,FF\\r\\n";
+  const std::string stopped = "ACK RS:00,80,E6,34,00,01,FF,FF,FF\\r\\n";
+  const std::string opening = "ACK RS:00,80,C4,B2,1D,0A,FF,FF,FF\\r\\n";
+  int pct = -1;
+  CHECK(status_is_at_end(closed));
+  CHECK(!status_is_stopped_midway(closed));
+  CHECK(parse_position(closed, pct) && pct == 0);
+  CHECK(status_is_stopped_midway(stopped));
+  CHECK(!status_is_at_end(stopped));
+  CHECK(parse_position(stopped, pct) && pct == 52);
+  CHECK(!status_is_at_end(opening) && !status_is_stopped_midway(opening));
+  CHECK(status_is_opening(opening) && parse_position(opening, pct) && pct == 50);
+  CHECK(!status_is_at_end("ACK RS:00"));  // too short: no throw
 }
 
 int main() {
@@ -117,6 +134,7 @@ int main() {
   test_parse_params_rejects();
   test_parse_position();
   test_status_motion();
+  test_status_idle_kinds();
   if (failures) {
     std::printf("%d check(s) failed\n", failures);
     return 1;

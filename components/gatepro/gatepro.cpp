@@ -135,19 +135,27 @@ void GatePro::process() {
       return;
     }
     
-    // Extract the pattern from the message
+    // Classify the idle status from the 3rd token and the position byte
+    // ("ACK RS:00,80,<state>,<pos>,..."): A2 = at an end stop, E6 = stopped midway.
+    int status_pct = -1;
+    const bool have_pct = parse_position(msg, status_pct);
     std::string current_pattern = "";
-    if (msg.length() >= 21) {
-      current_pattern = msg.substr(10, 11);
+    if (status_is_at_end(msg) && have_pct && status_pct == 0) {
+      current_pattern = "closed";
+    } else if (status_is_at_end(msg) && have_pct && status_pct >= 99) {
+      current_pattern = "open";
+    } else if (status_is_stopped_midway(msg) && have_pct) {
+      current_pattern = "stopped";
+    } else if (msg.length() >= 24) {
+      current_pattern = msg.substr(13, 11);
     }
     
     // Main logic: Only update states when the gate is in motion or when the state is unknown
     // This prevents state jumping when the gate is stationary
     bool should_update_state = !this->operation_finished || this->gate_state_ == STATE_UNKNOWN;
     
-    // Check for the specific pattern that indicates a closed gate
-    // A2,00,40,00 is the pattern seen in logs when gate is closed
-    if (current_pattern == "A2,00,40,00") {
+    // Closed gate: "ACK RS:00,80,A2,00,40,00,..."
+    if (current_pattern == "closed") {
       // Track consecutive pattern readings for stability
       if (this->last_pattern_seen_ == current_pattern) {
         this->consecutive_pattern_readings_++;
@@ -181,9 +189,8 @@ void GatePro::process() {
       return;
     }
     
-    // Check for the specific pattern that indicates an open gate
-    // A2,E3,40,00 is the pattern seen in logs when gate is open
-    if (current_pattern == "A2,E3,40,00") {
+    // Open gate: idle at an end stop with position >= 99 %
+    if (current_pattern == "open") {
       // Track consecutive pattern readings for stability
       if (this->last_pattern_seen_ == current_pattern) {
         this->consecutive_pattern_readings_++;
@@ -217,6 +224,29 @@ void GatePro::process() {
       return;
     }
     
+    // Stopped midway (e.g. after boot): adopt the reported position
+    if (current_pattern == "stopped") {
+      if (this->last_pattern_seen_ == current_pattern) {
+        this->consecutive_pattern_readings_++;
+      } else {
+        this->last_pattern_seen_ = current_pattern;
+        this->consecutive_pattern_readings_ = 1;
+      }
+      if (should_update_state && this->consecutive_pattern_readings_ >= 3 &&
+          this->gate_state_ != STATE_STOPPED) {
+        ESP_LOGI(TAG, "Detected gate stopped midway at %d%%", status_pct);
+        GateProState old_state = this->gate_state_;
+        this->gate_state_ = STATE_STOPPED;
+        this->position = (float) status_pct / 100;
+        this->position_ = this->position;
+        this->current_operation = cover::COVER_OPERATION_IDLE;
+        this->operation_finished = true;
+        this->log_state_change(old_state, this->gate_state_);
+        this->publish_state();
+      }
+      return;
+    }
+
     // If we get here, we've seen a different pattern
     if (!current_pattern.empty() && this->last_pattern_seen_ != current_pattern) {
       this->last_pattern_seen_ = current_pattern;
